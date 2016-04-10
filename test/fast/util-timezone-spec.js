@@ -1,16 +1,5 @@
 describe("When using timezone utilities", function() {
-    // Feb 7, 2016 is a sunday
-    var sunday_in_utc = (new Date(Date.UTC(2016, 1, 7, 0, 0, 0)));    
-    var sunday_local  = new Date(2016,1,7);
-    var sunday_local_DST  = new Date(2016,2,13);
 
-    var monday_in_utc = (new Date(Date.UTC(2016, 1, 8, 0, 0, 0)));    
-    var monday_in_utc_DST = (new Date(Date.UTC(2016, 2, 14, 0, 0, 0)));    
-    var monday_local  = new Date(2016,1,8);
-    var monday_local_DST = new Date(2016,2,14);
-    
-    var friday_local  = new Date(2016,1,12);
-        
     it("given a date in a local timezone, should provide midnight sunday morning for that timezone",function(){
         
         expect(TSDateUtils.getBeginningOfWeekForLocalDate(sunday_local)).toEqual(sunday_local);
