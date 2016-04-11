@@ -1,0 +1,23 @@
+td.ts-total-cell {
+    background-color: #eee !important;
+}
+
+.x-grid-row-summary {
+    background-color: #eee;
+}
+
+.x-grid-row-alt .x-grid-td {
+    background-color: #fff;
+}
+
+.x-border-layout-ct {
+    background-color: #ffffff;
+}
+
+td.ts-weekend-cell {
+    background-color: #B0E0E6 !important;
+}
+
+span.red {
+    color: red;
+}

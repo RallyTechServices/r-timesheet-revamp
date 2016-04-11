@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Apr 10 2016 15:57:51 GMT-0700 (PDT) -->
+    <!--  Build Date: Sun Apr 10 2016 20:56:14 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Apr 10 2016 15:57:51 GMT-0700 (PDT)";
-        var CHECKSUM = 2029901462;
+        var APP_BUILD_DATE = "Sun Apr 10 2016 20:56:14 GMT-0700 (PDT)";
+        var CHECKSUM = 23782804796;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -15,6 +15,219 @@
     <script type="text/javascript">
         Rally.onReady(function() {
              
+Ext.define('TSUtilities', {
+    singleton: true,
+    
+    timeLockKeyPrefix: 'rally.technicalservices.timesheet.weeklock',
+    approvalKeyPrefix: 'rally.technicalservices.timesheet.status',
+    deletionKeyPrefix: 'rally.technicalservices.timesheet.deletion',
+    pinKeyPrefix     : 'rally.technicalservices.timesheet.pin',
+
+    archiveSuffix: '~archived',
+    
+    loadWsapiRecords: function(config,returnOperation){
+        var deferred = Ext.create('Deft.Deferred');
+        var me = this;
+        
+        var default_config = {
+            model: 'Defect',
+            fetch: ['ObjectID']
+        };
+        Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
+            callback : function(records, operation, successful) {
+                if (successful){
+                    if ( returnOperation ) {
+                        deferred.resolve(operation);
+                    } else {
+                        deferred.resolve(records);
+                    }
+                } else {
+                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+                }
+            }
+        });
+        return deferred.promise;
+    },
+    
+    loadWsapiRecordsWithParallelPages: function(config, msg) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        
+        var count_check_config = Ext.clone(config);
+        count_check_config.limit = 1;
+        count_check_config.pageSize = 1;
+        count_check_config.fetch = ['ObjectID'];
+        
+        this.loadWsapiRecords(count_check_config, true).then({
+            success: function(operation) {                
+                config.pageSize = 200;
+                config.limit = config.pageSize;
+                var total = operation.resultSet.totalRecords;
+                var page_count = Math.ceil(total/config.pageSize);
+     
+                var promises = [];
+                Ext.Array.each(_.range(1,page_count+1), function(page_index) {
+                    var config_clone = Ext.clone(config);
+                    config_clone.currentPage = page_index;
+                    promises.push(function() {
+                        var percentage = parseInt( page_index * 100 / page_count, 10);
+                        var message = msg || "Loading values";
+                        Rally.getApp().setLoading(message + " (" + percentage + "%)");
+                        return me.loadWsapiRecords(config_clone); 
+                    });
+                });
+                CA.techservices.promise.ParallelThrottle.throttle(promises, 6, me).then({
+                        success: function(results){
+                            deferred.resolve( Ext.Array.flatten(results) );
+                        },
+                        failure: function(msg) {
+                            deferred.reject(msg);
+                        }
+                });
+            },
+            failure: function(msg) {
+                deferred.reject(msg);
+            }
+        });
+        return deferred.promise;
+    },
+    
+    getPreferenceProject: function() {
+        var app = Rally.getApp();
+        
+        return app.getSetting('preferenceProjectRef');
+    },
+    
+    isEditableProjectForCurrentUser: function(projectRef,scope) {
+        var app = scope || Rally.getApp(),
+            me = this;
+
+        if ( this.currentUserIsAdmin(scope) ) {
+            return true;
+        }
+        
+        var project_oid = this._getOidFromRef(projectRef);
+        var editor_permissions = Ext.Array.filter(app.getContext().getPermissions().userPermissions, function(permission){
+            if ( permission.Role != "Editor" && permission.Role != "ProjectAdmin") {
+                return false;
+            }
+            
+            return ( me._getOidFromRef(permission._ref) == project_oid );
+        });
+        
+        console.log(editor_permissions);
+        return ( editor_permissions.length > 0 );
+    },
+    
+    getEditableProjectForCurrentUser: function() {
+        var app = Rally.getApp();
+        if ( this._currentUserCanWrite() ) {
+            return app.getContext().getProjectRef();
+        }
+        
+        var workspace_oid = this._getOidFromRef( app.getContext().getWorkspaceRef());
+        
+        var editor_permissions = Ext.Array.filter(app.getContext().getPermissions().userPermissions, function(permission){
+            if ( Ext.isEmpty(permission.Workspace) ) {
+                return false;
+            }
+            var permission_oid = this._getOidFromRef(permission.Workspace);
+
+            //console.log('comparing ', workspace_oid, permission_oid, permission);
+            if (workspace_oid  !=  permission_oid) {
+                return false;
+            }
+                        
+            return ( permission.Role == "Editor" || permission.Role == "ProjectAdmin");
+        },this);
+        
+        
+        if ( editor_permissions.length > 0 ) {
+            return editor_permissions[0]._ref;
+        }
+        return false;
+    },
+    
+    _getOidFromRef: function(ref) {
+        var ref_array = ref.replace(/\.js$/,'').split(/\//);
+        return ref_array[ref_array.length-1].replace(/\.js/,'');
+    },
+    
+    // true if sub or workspace admin
+    currentUserIsAdmin: function(scope){
+        var app = scope || Rally.getApp();
+        
+        console.log('current user:', app.getContext().getUser());
+        if ( this.currentUserIsSubAdmin() ) {
+            return true;
+        }
+        
+        var permissions = app.getContext().getPermissions().userPermissions;
+
+        var workspace_admin_list = Ext.Array.filter(permissions, function(p) {
+            return ( p.Role == "Workspace Admin" || p.Role == "Subscription Admin");
+        });
+        
+        var current_workspace_ref = app.getContext().getWorkspace()._ref;
+        var is_workspace_admin = false;
+                
+        if ( workspace_admin_list.length > 0 ) {
+            Ext.Array.each(workspace_admin_list, function(p){
+                
+                if (current_workspace_ref.replace(/\.js$/,'') == p._ref.replace(/\.js$/,'')) {
+                    is_workspace_admin = true;
+                }
+            });
+        }
+        
+        return is_workspace_admin;
+    },
+    
+    currentUserIsSubAdmin: function(scope) {
+        var app = scope || Rally.getApp();
+                
+        var permissions = app.getContext().getPermissions().userPermissions;
+
+        var sub_admin_list = Ext.Array.filter(permissions, function(p) {
+            return ( p.Role == 'Subscription Admin' );
+        });
+        
+        return ( sub_admin_list.length > 0 );
+    },
+    
+    _currentUserCanWrite: function() {
+        var app = Rally.getApp();
+        
+        //console.log('_currentUserCanWrite',app.getContext().getUser(), app.getContext().getUser().SubscriptionAdmin);
+        if ( app.getContext().getUser().SubscriptionAdmin ) {
+            return true;
+        }
+        
+        var permissions = app.getContext().getPermissions().userPermissions;
+
+        var workspace_admin_list = Ext.Array.filter(permissions, function(p) {
+            return ( p.Role == "Workspace Admin" || p.Role == "Subscription Admin");
+        });
+        
+        var current_workspace_ref = app.getContext().getWorkspace()._ref;
+        var can_unlock = false;
+                
+        if ( workspace_admin_list.length > 0 ) {
+            Ext.Array.each(workspace_admin_list, function(p){
+                
+                if (current_workspace_ref.replace(/\.js$/,'') == p._ref.replace(/\.js$/,'')) {
+                    can_unlock = true;
+                }
+            });
+        }
+        
+        return can_unlock;
+    },
+    
+    _currentUserCanUnapprove: function() {
+        return this.currentUserIsAdmin();
+    }
+});
 /**
  * A link that pops up a version dialog box
  */
@@ -176,14 +389,122 @@ Ext.define('Rally.technicalservices.Logger',{
 
 });
 
+Ext.define('TSDateUtils', {
+    singleton: true,
+    
+    getBeginningOfWeekForLocalDate: function(week_date) {
+        var start_of_week_here = Ext.Date.add(week_date, Ext.Date.DAY, -1 * week_date.getDay());
+        return start_of_week_here;
+    },
+    
+    getBeginningOfWeekISOForLocalDate: function(week_date,showShiftedTimeStamp) {
+        var offset = week_date.getTimezoneOffset();  // 480 is pacific, -330 is india
+        
+        var local_beginning = TSDateUtils.getBeginningOfWeekForLocalDate(week_date);
+        var shifted_time = Rally.util.DateTime.add(week_date,'minute',offset);
+                
+        if ( shifted_time.getUTCDay() === 0 && shifted_time.getHours() === 0  ) {
+            // this is already the beginning of the week
+            var shifted_string = this.formatShiftedDate(week_date, 'Y-m-d');
+            if ( showShiftedTimeStamp ) {
+                return shifted_string + 'T00:00:00.0Z';
+            }
+            return shifted_string;
+        }
+        
+        if (showShiftedTimeStamp) {
+            return Rally.util.DateTime.toIsoString(local_beginning).replace(/T.*$/,'T00:00:00.0Z');
+        }
+        
+        return Rally.util.DateTime.toIsoString(local_beginning).replace(/T.*$/,'');
+    },
+    
+    formatShiftedDate: function(jsdate,format) {
+        var offset = jsdate.getTimezoneOffset();  // 480 is pacific, -330 is india
+
+        if ( offset > 0 ) {
+            jsdate = Rally.util.DateTime.add(jsdate,'minute',offset);
+        }
+
+        return Ext.util.Format.date(jsdate,format);
+    },
+    
+    pretendIMeantUTC: function(jsdate,asUTC) {
+        var offset = jsdate.getTimezoneOffset();
+        
+        if ( asUTC ) {
+            return Rally.util.DateTime.toIsoString(jsdate).replace(/T.*$/,'T00:00:00.000Z');
+        }
+        var shiftedDate = Rally.util.DateTime.add(jsdate,'minute',-1 * offset);
+        
+        return shiftedDate;
+    },
+    
+    // returns a promise, fulfills with a boolean
+    isApproved: function(week_start_iso, user_oid) {
+        var deferred = Ext.create('Deft.Deferred');
+        
+        var short_iso_date = week_start_iso;
+        var key_user_oid = user_oid || Rally.getApp().getContext().getUser().ObjectID;
+        
+        var key = Ext.String.format("{0}.{1}.{2}", 
+            TSUtilities.approvalKeyPrefix,
+            short_iso_date,
+            key_user_oid
+        );
+        
+        this._loadWeekStatusPreference(key).then({
+            success: function(preference) {
+                if (preference.length === 0) { 
+                    deferred.resolve(false);
+                    return;
+                }
+                var value = preference[0].get('Value');
+                if ( /{/.test(value) ) {
+                    var status_object = Ext.JSON.decode(value);
+                    if ( status_object.status == "Approved" ) { 
+                        deferred.resolve(true);
+                        return;
+                    }
+                }
+                
+                deferred.resolve(false);
+            },
+            failure: function(msg) {
+                deferred.reject(msg);
+            }
+        });
+        
+        return deferred.promise;
+    },
+    
+    _loadWeekStatusPreference: function(key) {
+        
+        var config = {
+            model:'Preference',
+            limit: 1,
+            pageSize: 1,
+            filters: [
+                {property:'Name',operator: 'contains', value:key},
+                {property:'Name',operator:'!contains',value: TSUtilities.archiveSuffix}
+            ],
+            fetch: ['Name','Value'],
+            sorters: [{property:'CreationDate', direction: 'DESC'}]
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);
+    }
+});
+
 Ext.define("TSTimesheet", {
     extend: 'Rally.app.App',
     componentCls: 'app',
     logger: new Rally.technicalservices.Logger(),
     defaults: { margin: 10 },
+    layout: 'border',
+    
     items: [
-        {xtype:'container',itemId:'message_box',tpl:'Hello, <tpl>{_refObjectName}</tpl>'},
-        {xtype:'container',itemId:'display_box'}
+        {xtype:'container', itemId:'selector_box', region: 'north',  layout: { type:'hbox' }, minHeight: 25}
     ],
 
     integrationHeaders : {
@@ -191,74 +512,59 @@ Ext.define("TSTimesheet", {
     },
                         
     launch: function() {
-        var me = this;
-        this.setLoading("Loading stuff...");
-
-        this.down('#message_box').update(this.getContext().getUser());
-        
-        var model_name = 'Defect',
-            field_names = ['Name','State'];
-        
-        this._loadAStoreWithAPromise(model_name, field_names).then({
-            scope: this,
-            success: function(store) {
-                this._displayGrid(store,field_names);
-            },
-            failure: function(error_message){
-                alert(error_message);
-            }
-        }).always(function() {
-            me.setLoading(false);
-        });
+        this._addSelectors(this.down('#selector_box'));
     },
-      
-    _loadWsapiRecords: function(config){
-        var deferred = Ext.create('Deft.Deferred');
-        var me = this;
-        var default_config = {
-            model: 'Defect',
-            fetch: ['ObjectID']
-        };
-        this.logger.log("Starting load:",config.model);
-        Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
-            callback : function(records, operation, successful) {
-                if (successful){
-                    deferred.resolve(records);
-                } else {
-                    me.logger.log("Failed: ", operation);
-                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+    _addSelectors: function(container) {
+        container.removeAll();
+        
+        container.add({xtype:'container',flex: 1});
+        
+        container.add({
+            xtype:'rallydatefield',
+            itemId:'date_selector',
+            fieldLabel: 'Week Starting',
+            listeners: {
+                scope: this,
+                change: function(dp, new_value) {
+                    var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value);
+                    if ( week_start !== new_value ) {
+                        dp.setValue(week_start);
+                    }
+                    if ( new_value.getDay() === 0 ) {
+                        this.updateData();
+                    }
                 }
             }
-        });
-        return deferred.promise;
-    },
-
-    _loadAStoreWithAPromise: function(model_name, model_fields){
-        var deferred = Ext.create('Deft.Deferred');
-        var me = this;
-        this.logger.log("Starting load:",model_name,model_fields);
-          
-        Ext.create('Rally.data.wsapi.Store', {
-            model: model_name,
-            fetch: model_fields
-        }).load({
-            callback : function(records, operation, successful) {
-                if (successful){
-                    deferred.resolve(this);
-                } else {
-                    me.logger.log("Failed: ", operation);
-                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
-                }
-            }
-        });
-        return deferred.promise;
+        }).setValue(new Date());
     },
     
-    _displayGrid: function(store,field_names){
-        this.down('#display_box').add({
-            xtype: 'rallygrid',
-            store: store,
-            columnCfgs: field_names
+    updateData: function() {
+        var me = this;
+        var timetable  = this.down('tstimetable');
+        if ( ! Ext.isEmpty(timetable) ) { timetable.destroy(); }
+        
+        this.startDate = this.down('#date_selector').getValue();
+        
+        var editable = true;
+        
+        this.time_table = this.add({ 
+            xtype: 'tstimetable',
+            region: 'center',
+            layout: 'fit',
+            margin: 15,
+            startDate: this.startDate,
+            editable: editable,
+            listeners: {
+                scope: this,
+                gridReady: function() {
+//                    this._addButtons(button_box);
+//                    if ( editable ) {
+//                        Ext.Array.each( this.query('rallybutton'), function(button) {
+//                            button.setDisabled(false);
+//                        });
+//                    }
+                }
+            }
         });
     },
     
@@ -289,21 +595,435 @@ Ext.define("TSTimesheet", {
     }
 });
 
+Ext.define('CA.techservices.timesheet.TimeRowUtils',{
+    singleton: true,
+    
+    daysInOrder: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+    
+    getDayOfWeek: function(value, record) {
+        var week_start_date =  record.get('WeekStartDate');
+        if ( Ext.isEmpty( week_start_date ) ) {
+            return 0;
+        }
+        return week_start_date.getUTCDay();
+    },
+    
+    getFieldFromTimeEntryItems: function(value,record,field_name){
+        var teis = record.get('TimeEntryItemRecords');
+        if ( Ext.isEmpty(teis) ) {
+            return value;
+        }
+        
+        if ( !Ext.isArray(teis) || teis.length === 0 ) {
+            return value;
+        }
+        
+        return teis[0].get(field_name);
+    },
+    
+    getDayValueFromTimeEntryValues: function(value, record, day_name) {
+        var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
+        var week_start_date =  record.get('WeekStartDate');
+        var time_entry_values = record.get('TimeEntryValueRecords');
+        
+        var day_value = 0;
+        Ext.Array.each(time_entry_values, function(time_entry_value){
+            var tev_day = time_entry_value.get('DateVal').getUTCDay();
+            if ( tev_day == index && time_entry_value.get('DateVal') >= week_start_date ) {
+                day_value = time_entry_value.get('Hours');
+            }
+        });
+        
+        return day_value || 0;
+    },
+    
+    getTotalFromDayValues: function(value, record) {
+        var total = 0;
+        Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
+            var hours = record.get(day) || 0;
+            total = total + hours;
+        });
+        
+        return total;
+    }
+});
+
 Ext.define('CA.techservices.timesheet.TimeRow',{
     extend: 'Ext.data.Model',
     fields: [
-        { name: 'Project',type: 'object' },
-        { name: 'Task', type:'object' },
-        { name: 'User', type:'object' },
-        { name: 'WeekStartDate', type:'date' },
-        { name: 'WorkProduct', type: 'object' },
-        // WeekStart: Day of Week (0=Sunday, 6=Saturday)
-        { name: 'WeekStart', type: 'int' },
+        { name: '__SecretKey', type:'string' },
+        { name: 'Project',type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Project');
+            }
+        },
         
-        // store the AC records for saving/updatingqaaaaaaa
-        { name: 'TimeEntryItemRecords', type:'object'},
-        { name: 'TimeEntryValueRecords', type:'object'}
-    ]
+        { name: 'Task', type:'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+            }
+        },
+        { name: 'User', type:'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'User');
+            }
+        },
+        { name: 'WeekStartDate', type:'date' },
+        { name: 'WorkProduct', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+            }
+        },
+        // WeekStart: Day of Week (0=Sunday, 6=Saturday)
+        { name: 'WeekStart', type: 'int', convert:  CA.techservices.timesheet.TimeRowUtils.getDayOfWeek },
+        
+        // store the AC records for saving/updating
+        { name: 'TimeEntryItemRecords', type:'object', defaultValue: []},
+        { name: 'TimeEntryValueRecords', type:'object', defaultValue: []},
+        
+        //
+        { name: 'Sunday', type:'number', defaultValue: 0 , convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Sunday');
+            }
+        },
+        { name: 'Monday', type:'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Monday');
+            }
+        },
+        { name: 'Tuesday', type:'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Tuesday');
+            }
+        },
+        { name: 'Wednesday', type:'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Wednesday');
+            }
+        },
+        { name: 'Thursday', type:'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Thursday');
+            }
+        },
+        { name: 'Friday', type:'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Friday');
+            }
+        },
+        { name: 'Saturday', type:'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Saturday');
+            }
+        },
+        { name: 'Total', type: 'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getTotalFromDayValues(value, record);
+            }
+        }
+    ],
+    
+    getWeekStartDates: function() {
+        var day_of_week = this.get('WeekStart');
+        var date_of_week = this.get('WeekStartDate');
+        
+        
+        if (day_of_week === 0 ) {
+            return [date_of_week];
+        }
+        
+        var date1 = Rally.util.DateTime.add(date_of_week, 'day', -1 * day_of_week);
+        var date2 = Rally.util.DateTime.add(date1, 'day', 7);
+        
+        return [date1, date2];
+    }
+});
+Ext.override(Rally.ui.grid.plugin.Validation,{
+    _onBeforeEdit: function(editor, object, eOpts) {
+        // clear this because it won't let us do the getEditor on cells
+    }
+});
+
+Ext.define('CA.techservices.TimeTable', {
+    extend: 'Ext.Container',
+    alias:  'widget.tstimetable',
+    
+    logger: new Rally.technicalservices.Logger(),
+    
+    rows: [],
+    cls: 'tstimetable',
+    
+    time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
+        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID'],
+        
+    config: {
+        startDate: null,
+        editable: true,
+        timesheetUser: null
+    },
+    
+    constructor: function (config) {
+        this.mergeConfig(config);
+        
+        if (Ext.isEmpty(config.startDate) || !Ext.isDate(config.startDate)) {
+            throw "CA.techservices.TimeTable requires startDate parameter (JavaScript Date)";
+        }
+        
+        this.callParent([this.config]);
+    },
+    
+    initComponent: function() {
+        var me = this;
+        
+        this.callParent(arguments);
+        
+        this.addEvents(
+            /**
+             * @event
+             * Fires when the grid has been rendered
+             * @param {CA.techservices.TimeTable } this
+             * @param {Rally.ui.grid.Grid} grid
+             */
+            'gridReady'
+        );
+        
+                
+        if ( Ext.isEmpty(this.timesheetUser) ) {
+            this.timesheetUser = Rally.getApp().getContext().getUser();
+        }
+        // shift start date
+        this.startDate = TSDateUtils.pretendIMeantUTC(this.startDate);
+        
+        this._updateData();
+    },
+    
+    _updateData: function() {
+        this.setLoading('Loading time...');
+        var me = this;
+        
+        Deft.Chain.sequence([
+            this._loadTimeEntryItems,
+            this._loadTimeEntryValues
+        ],this).then({
+            scope: this,
+            success: function(results) {
+                var time_entry_items  = results[0];
+                var time_entry_values = results[1];
+                
+                this.rows = this._createRows(time_entry_items, time_entry_values);
+                this._makeGrid(this.rows);
+                this.setLoading(false);
+            }
+        });
+    },
+    
+    _makeGrid: function(rows) {
+        this.removeAll();
+        var me = this,
+            table_store = Ext.create('Rally.data.custom.Store',{
+                groupField: '__SecretKey',
+                data: rows,
+                pageSize: 100
+            });
+            
+        this.grid = this.add({ 
+            xtype:'rallygrid', 
+            store: table_store,
+            columnCfgs: this._getColumns(),
+            showPagingToolbar : false,
+            showRowActionsColumn : false,
+            sortableColumns: false,
+            disableSelection: true,
+            enableColumnMove: false,
+            enableColumnResize : false,
+            features: [{
+                ftype: 'groupingsummary',
+                startCollapsed: false,
+                hideGroupedHeader: true,
+                groupHeaderTpl: ' ',
+                enableGroupingMenu: false
+            }]
+        });
+        
+        this.fireEvent('gridReady', this, this.grid);
+    },
+    
+    _getColumns: function() {
+        var me = this,
+            columns = [];
+        
+        var columns = Ext.Array.push(columns,[
+            {
+                dataIndex: 'Project',
+                text: 'Project',
+                flex: 1,
+                editor: null,
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) ) {
+                        return '--';
+                    }
+                    return value._refObjectName;
+                }
+            },
+            {
+                dataIndex: 'WorkProduct',
+                text: 'Work Item',
+                flex: 1,
+                editor: null,
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) ) {
+                        return '--';
+                    }
+                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                        Rally.nav.Manager.getDetailUrl(value),
+                        record.get('WorkProduct').FormattedID,
+                        record.get('WorkProduct').Name
+                    );;
+                }
+            },
+            {
+                dataIndex: 'Task',
+                text: 'Task',
+                flex: 1,
+                editor: null,
+                renderer: function(value, meta, record) {
+                    if ( Ext.isEmpty(value) ) {
+                        return '--';
+                    }
+                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                        Rally.nav.Manager.getDetailUrl(value),
+                        record.get('Task').FormattedID,
+                        record.get('Task').Name
+                    );;
+                }
+            }
+        ]);
+       
+        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
+            columns.push(this._getColumnForDay(day));
+        },this);
+        
+        var total_renderer = function(value, meta, record) {
+            meta.tdCls = "ts-total-cell";
+            return value;
+        }; 
+        
+        columns.push({
+            dataIndex:'Total',
+            text:'Total', 
+            width: 50, 
+            resizable: false, 
+            align: 'center',
+            editor: null,
+            summaryType: 'sum',
+//            summaryRenderer: function(value,meta,record) {
+//                if ( value < 40 ) {
+//                    meta.style = 'background: #fec6cd;';
+//                }
+//                return value;
+//            },
+            renderer: total_renderer
+        });
+            
+        return columns;
+    },
+    
+    _getColumnForDay: function(day) {
+        var editor_config = function(record,df) {
+            var minValue = 0;
+            return Ext.create('Ext.grid.CellEditor', {
+                field: Ext.create('Rally.ui.NumberField', {
+                    xtype:'rallynumberfield',
+                    minValue: minValue,
+                    maxValue: 24,
+                    disabled: disabled,
+                    selectOnFocus: true,
+                    listeners: {
+                        change: function(field, new_value, old_value) {1
+                            if ( Ext.isEmpty(new_value) ) {
+                                field.setValue(0);
+                            }
+                        }
+                    }
+                })
+            });
+        };
+
+        var config = {
+            dataIndex:day,
+            text: day,
+            width: 50, 
+            resizable: false,
+            align: 'center',
+            getEditor: editor_config, 
+            summaryType: 'sum'
+        };
+        
+        if ( day == "Saturday" || day == "Sunday" ) {
+            config.renderer = function(value, meta, record) {
+                meta.tdCls = "ts-weekend-cell";
+                return value;
+            };
+        }
+        
+        return config;
+    },
+            
+    _createRows: function(time_entry_items, time_entry_values) {
+        var rows = [];
+        
+        Ext.Array.map(time_entry_items, function(time_entry_item){
+            var oid = time_entry_item.get('ObjectID');
+            var values_for_time_entry_item =  Ext.Array.filter(time_entry_values, function(time_entry_value){
+                return time_entry_value.get('TimeEntryItem').ObjectID == oid;
+            });
+            
+            rows.push(Ext.create('CA.techservices.timesheet.TimeRow',{
+                TimeEntryItemRecords: [time_entry_item],
+                TimeEntryValueRecords: values_for_time_entry_item
+            }));
+        });
+        
+        return rows;
+    },
+    
+    
+    _loadTimeEntryItems: function() {
+        this.setLoading('Loading time entry items...');
+        
+        var config = {
+            model: 'TimeEntryItem',
+            context: {
+                project: null
+            },
+            fetch: this.time_entry_item_fetch,
+            filters: [
+                {property:'WeekStartDate',value:this.startDate},
+                {property:'User.ObjectID',value:this.timesheetUser.ObjectID}
+            ]
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);
+    },
+    
+    _loadTimeEntryValues: function() {
+        this.setLoading('Loading time entry values...');
+
+        var config = {
+            model: 'TimeEntryValue',
+            context: {
+                project: null
+            },
+            fetch: ['DateVal','Hours','TimeEntryItem','ObjectID'],
+            filters: [
+                {property:'TimeEntryItem.WeekStartDate',value:this.startDate},
+                {property:'TimeEntryItem.User.ObjectID',value:this.timesheetUser.ObjectID}
+            ]
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);        
+    }
 });
             
                Rally.launchApp('TSTimesheet', {
@@ -330,6 +1050,29 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
     margin-top: 25px;
     margin-right: 5px;
     cursor: pointer;
+}
+td.ts-total-cell {
+    background-color: #eee !important;
+}
+
+.x-grid-row-summary {
+    background-color: #eee;
+}
+
+.x-grid-row-alt .x-grid-td {
+    background-color: #fff;
+}
+
+.x-border-layout-ct {
+    background-color: #ffffff;
+}
+
+td.ts-weekend-cell {
+    background-color: #B0E0E6 !important;
+}
+
+span.red {
+    color: red;
 }
     </style>
 

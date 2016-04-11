@@ -49,6 +49,7 @@ describe("Time Row Creation By Time Entry Values Tests", function() {
         expect(row.get('Thursday')) .toEqual(3);
         expect(row.get('Friday'))   .toEqual(0);
         expect(row.get('Saturday')) .toEqual(4);
+        expect(row.get('Total'))    .toEqual(10);
     });
     
     it('should create values based on CA TEV if starting on Tuesday', function(){
@@ -65,6 +66,7 @@ describe("Time Row Creation By Time Entry Values Tests", function() {
         expect(row.get('Thursday')) .toEqual(3);
         expect(row.get('Friday'))   .toEqual(0);
         expect(row.get('Saturday')) .toEqual(4);
+        expect(row.get('Total'))    .toEqual(21);
     });
     
 });

@@ -38,12 +38,23 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         });
         
         return day_value || 0;
+    },
+    
+    getTotalFromDayValues: function(value, record) {
+        var total = 0;
+        Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
+            var hours = record.get(day) || 0;
+            total = total + hours;
+        });
+        
+        return total;
     }
 });
 
 Ext.define('CA.techservices.timesheet.TimeRow',{
     extend: 'Ext.data.Model',
     fields: [
+        { name: '__SecretKey', type:'string' },
         { name: 'Project',type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Project');
@@ -107,6 +118,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'Saturday', type:'number', defaultValue: 0, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Saturday');
+            }
+        },
+        { name: 'Total', type: 'number', defaultValue: 0, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getTotalFromDayValues(value, record);
             }
         }
     ],
