@@ -28,15 +28,4 @@ describe("Time Row Creation By Value Tests", function() {
         var row = Ext.create('CA.techservices.timesheet.TimeRow',{ WeekStartDate: friday_in_utc });
         expect(row.get('WeekStart')).toEqual(5);
     });
-    
-    it("should determine weekstart for CA TEIs if on Sunday", function(){
-        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ WeekStartDate: sunday_in_utc });
-        expect(row.getWeekStartDates()).toEqual([sunday_in_utc]);
-    });
-    
-    it("should determine weekstarts for CA TEIs if not Sunday", function(){
-        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ WeekStartDate: friday_in_utc });
-        expect(row.getWeekStartDates()).toEqual([sunday_in_utc, second_sunday_in_utc]);
-    });
-    
 });

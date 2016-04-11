@@ -38,3 +38,31 @@ Ext.define('mockStory',{
         {name:'ScheduleState',type:'string',defaultValue:'Defined'}
     ]
 });
+
+
+Ext.define('mockTimeEntryItem',{
+    extend: 'Ext.data.Model',
+    fields: [
+        {name:'ObjectID', type: 'int', defaultValue: 75},
+        {name:'CreationDate', type:'string', defaultValue: Rally.util.DateTime.toIsoString(new Date())},
+        {name:'Project', type:'object' },
+        {name:'ProjectDisplayString', type:'string' },
+        {name:'Task', type:'object' },
+        {name:'TaskDisplayString', type:'string' },
+        {name:'WeekStartDate', type:'auto' },
+        {name:'WorkProduct', type:'object'},
+        {name:'WorkProductString', type:'string' }
+    ]
+});
+
+Ext.define('mockTimeEntryValue',{
+    extend: 'Ext.data.Model',
+    fields: [
+        {name:'ObjectID', type: 'int', defaultValue: 75},
+        {name:'CreationDate', type:'string', defaultValue: Rally.util.DateTime.toIsoString(new Date())},
+        {name:'DateVal', type:'auto'},
+        {name:'Hours', type:'number'},
+        {name:'TimeEntryItem', type:'object'}
+    ]
+});
+
