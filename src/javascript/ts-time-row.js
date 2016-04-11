@@ -3,6 +3,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     
     daysInOrder: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     
+    dayShortNames: {'Sunday':'Sun','Monday':'Mon','Tuesday':'Tues','Wednesday':'Wed','Thursday':'Thur','Friday':'Fri','Saturday':'Sat'},
+    
     getDayOfWeek: function(value, record) {
         var week_start_date =  record.get('WeekStartDate');
         if ( Ext.isEmpty( week_start_date ) ) {

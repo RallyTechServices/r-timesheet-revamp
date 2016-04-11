@@ -73,6 +73,9 @@ Ext.define('CA.techservices.TimeTable', {
                 this.rows = this._createRows(time_entry_items, time_entry_values);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
+            },
+            failure: function(msg) {
+                Ext.Msg.alert('Problem Loading', msg);
             }
         });
     },
@@ -189,6 +192,8 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     _getColumnForDay: function(day) {
+        var disabled = false;
+        
         var editor_config = function(record,df) {
             var minValue = 0;
             return Ext.create('Ext.grid.CellEditor', {
@@ -211,7 +216,7 @@ Ext.define('CA.techservices.TimeTable', {
 
         var config = {
             dataIndex:day,
-            text: day,
+            text: CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
             width: 50, 
             resizable: false,
             align: 'center',

@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Apr 10 2016 20:56:14 GMT-0700 (PDT) -->
+    <!--  Build Date: Sun Apr 10 2016 21:01:26 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Apr 10 2016 20:56:14 GMT-0700 (PDT)";
-        var CHECKSUM = 23782804796;
+        var APP_BUILD_DATE = "Sun Apr 10 2016 21:01:26 GMT-0700 (PDT)";
+        var CHECKSUM = 24327439181;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -600,6 +600,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     
     daysInOrder: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     
+    dayShortNames: {'Sunday':'Sun','Monday':'Mon','Tuesday':'Tues','Wednesday':'Wed','Thursday':'Thur','Friday':'Fri','Saturday':'Sat'},
+    
     getDayOfWeek: function(value, record) {
         var week_start_date =  record.get('WeekStartDate');
         if ( Ext.isEmpty( week_start_date ) ) {
@@ -814,6 +816,9 @@ Ext.define('CA.techservices.TimeTable', {
                 this.rows = this._createRows(time_entry_items, time_entry_values);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
+            },
+            failure: function(msg) {
+                Ext.Msg.alert('Problem Loading', msg);
             }
         });
     },
@@ -930,6 +935,8 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     _getColumnForDay: function(day) {
+        var disabled = false;
+        
         var editor_config = function(record,df) {
             var minValue = 0;
             return Ext.create('Ext.grid.CellEditor', {
@@ -952,7 +959,7 @@ Ext.define('CA.techservices.TimeTable', {
 
         var config = {
             dataIndex:day,
-            text: day,
+            text: CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
             width: 50, 
             resizable: false,
             align: 'center',

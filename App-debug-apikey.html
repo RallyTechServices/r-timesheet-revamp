@@ -3,14 +3,14 @@
 <head>
     <title>TS Timesheet</title>
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Apr 10 2016 15:57:51 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Sun Apr 10 2016 21:01:26 GMT-0700 (PDT)";
     </script>
     
     <script type="text/javascript" src="https://rally1.rallydev.com/apps/2.0/sdk-debug.js?apiKey=_PUT_APIKEY_HERE_"></script>
 
     <script type="text/javascript">
         Rally.onReady(function() {
-            Rally.loadScripts(["src/javascript/utils/__ts-info-link.js","src/javascript/utils/__ts-logger.js","src/javascript/app.js","src/javascript/ts-time-row.js"],
+            Rally.loadScripts(["src/javascript/utils/__ts-general-utils.js","src/javascript/utils/__ts-info-link.js","src/javascript/utils/__ts-logger.js","src/javascript/utils/__ts-time-utils.js","src/javascript/app.js","src/javascript/ts-time-row.js","src/javascript/ts-time-table.js"],
 	            function() {
 	                Rally.launchApp('TSTimesheet', {
 	                    name: 'TS Timesheet'
@@ -18,7 +18,7 @@
 	            }, true);
         });
     </script>
-<link rel="stylesheet" type="text/css" href="src/style/app.css">
+<link rel="stylesheet" type="text/css" href="src/style/app.css"><link rel="stylesheet" type="text/css" href="src/style/timesheet.css">
 
 </head>
 <body></body>

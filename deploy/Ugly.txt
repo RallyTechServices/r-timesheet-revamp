@@ -3,10 +3,10 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Apr 10 2016 15:57:51 GMT-0700 (PDT) -->
+    <!--  Build Date: Sun Apr 10 2016 21:01:27 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Apr 10 2016 15:57:51 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Sun Apr 10 2016 21:01:27 GMT-0700 (PDT)";
         var CHECKSUM = [%= checksum %];
     </script>
     
@@ -40,6 +40,29 @@
     margin-top: 25px;
     margin-right: 5px;
     cursor: pointer;
+}
+td.ts-total-cell {
+    background-color: #eee !important;
+}
+
+.x-grid-row-summary {
+    background-color: #eee;
+}
+
+.x-grid-row-alt .x-grid-td {
+    background-color: #fff;
+}
+
+.x-border-layout-ct {
+    background-color: #ffffff;
+}
+
+td.ts-weekend-cell {
+    background-color: #B0E0E6 !important;
+}
+
+span.red {
+    color: red;
 }
     </style>
 
