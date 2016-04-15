@@ -85,6 +85,7 @@ Ext.define('CA.techservices.TimeTable', {
         var me = this,
             table_store = Ext.create('Rally.data.custom.Store',{
                 groupField: '__SecretKey',
+                model: 'CA.techservices.timesheet.TimeRow',
                 data: rows,
                 pageSize: 100
             });
@@ -100,12 +101,20 @@ Ext.define('CA.techservices.TimeTable', {
             enableColumnMove: false,
             enableColumnResize : false,
             features: [{
-                ftype: 'groupingsummary',
+                ftype: 'summary',
                 startCollapsed: false,
                 hideGroupedHeader: true,
                 groupHeaderTpl: ' ',
                 enableGroupingMenu: false
-            }]
+            }],
+
+            viewConfig: {
+                listeners: {
+                    itemupdate: function(row, row_index) {
+                        me.logger.log('itemupdate', row);
+                    }
+                }
+            }
         });
         
         this.fireEvent('gridReady', this, this.grid);
@@ -204,10 +213,14 @@ Ext.define('CA.techservices.TimeTable', {
                     disabled: disabled,
                     selectOnFocus: true,
                     listeners: {
-                        change: function(field, new_value, old_value) {1
+                        change: function(field, new_value, old_value) {
                             if ( Ext.isEmpty(new_value) ) {
                                 field.setValue(0);
                             }
+                            
+                            console.log('change', day, new_value);
+                            record.set(day, new_value);
+                            record.save();
                         }
                     }
                 })

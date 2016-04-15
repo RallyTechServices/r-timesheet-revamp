@@ -14,6 +14,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     },
     
     getFieldFromTimeEntryItems: function(value,record,field_name){
+        if ( !Ext.isEmpty(value) ) { return value; }
+        
         var teis = record.get('TimeEntryItemRecords');
         if ( Ext.isEmpty(teis) ) {
             return value;
@@ -27,6 +29,9 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     },
     
     getDayValueFromTimeEntryValues: function(value, record, day_name) {
+        // if we're modifying this directly, don't take it from the TimeEntryValueRecords
+        if ( !Ext.isEmpty(value) ) { return value; }
+        
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  record.get('WeekStartDate');
         var time_entry_values = record.get('TimeEntryValueRecords');
@@ -41,7 +46,7 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         
         return day_value || 0;
     },
-    
+        
     getTotalFromDayValues: function(value, record) {
         var total = 0;
         Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
@@ -55,6 +60,7 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
 
 Ext.define('CA.techservices.timesheet.TimeRow',{
     extend: 'Ext.data.Model',
+
     fields: [
         { name: '__SecretKey', type:'string' },
         { name: 'Project',type: 'object', defaultValue: null, convert: 
@@ -87,37 +93,37 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'TimeEntryValueRecords', type:'object', defaultValue: []},
         
         //
-        { name: 'Sunday', type:'number', defaultValue: 0 , convert: 
+        { name: 'Sunday', type:'number', persist: true, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Sunday');
             }
         },
-        { name: 'Monday', type:'number', defaultValue: 0, convert: 
+        { name: 'Monday', type:'number', convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Monday');
             }
         },
-        { name: 'Tuesday', type:'number', defaultValue: 0, convert: 
+        { name: 'Tuesday', type:'number', convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Tuesday');
             }
         },
-        { name: 'Wednesday', type:'number', defaultValue: 0, convert: 
+        { name: 'Wednesday', type:'number', convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Wednesday');
             }
         },
-        { name: 'Thursday', type:'number', defaultValue: 0, convert: 
+        { name: 'Thursday', type:'number', convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Thursday');
             }
         },
-        { name: 'Friday', type:'number', defaultValue: 0, convert: 
+        { name: 'Friday', type:'number', convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Friday');
             }
         },
-        { name: 'Saturday', type:'number', defaultValue: 0, convert: 
+        { name: 'Saturday', type:'number', convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Saturday');
             }
@@ -142,5 +148,58 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var date2 = Rally.util.DateTime.add(date1, 'day', 7);
         
         return [date1, date2];
+    },
+    
+    save: function(v) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this,
+            changes = this.getChanges();
+        
+        console.log('--', this, v, changes);
+        var promises = [];
+        Ext.Object.each(changes, function(field, value) {
+            if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
+                return me._changeDayValue(field,value);
+            }
+        });
+        
+        return Deft.Chain.sequence(promises,this);
+        //return deferred.promise;
+    },
+    
+    _changeDayValue: function(day, value) {
+        var deferred = Ext.create('Deft.Deferred');
+        var time_entry_value = this._getTimeEntryValue(day);
+        
+        if ( Ext.isEmpty(time_entry_value) ) {
+            return;
+        }
+        
+        time_entry_value.set('Hours',value);
+        time_entry_value.save({
+            callback: function(results, operation, success) {
+                deferred.resolve(results);
+            }
+        });
+        
+        return deferred.promise;
+    },
+    
+    _getTimeEntryValue: function(day_name) {
+        var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
+        var week_start_date =  this.get('WeekStartDate');
+        var time_entry_values = this.get('TimeEntryValueRecords');
+        
+        console.log('looking for', day_name, index, week_start_date, time_entry_values);
+        
+        var day_value = null;
+        Ext.Array.each(time_entry_values, function(time_entry_value){
+            var tev_day = time_entry_value.get('DateVal').getUTCDay();
+            if ( tev_day == index && time_entry_value.get('DateVal') >= week_start_date ) {
+                day_value = time_entry_value;
+            }
+        });
+        
+        return day_value;
     }
 });
