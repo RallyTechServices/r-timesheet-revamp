@@ -29,6 +29,8 @@ Ext.define('CA.techservices.TimeTable', {
             throw "CA.techservices.TimeTable requires startDate parameter (JavaScript Date)";
         }
         
+        this.weekStart = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(this.startDate) || 0;
+        
         this.callParent([this.config]);
     },
     
@@ -60,6 +62,7 @@ Ext.define('CA.techservices.TimeTable', {
     _updateData: function() {
         this.setLoading('Loading time...');
         var me = this;
+        
         
         Deft.Chain.sequence([
             this._loadTimeEntryItems,
@@ -120,6 +123,18 @@ Ext.define('CA.techservices.TimeTable', {
         this.fireEvent('gridReady', this, this.grid);
     },
     
+    _getOrderedDaysBasedOnWeekStart: function(weekStart) {
+        if ( weekStart === 0 ) { return CA.techservices.timesheet.TimeRowUtils.daysInOrder; }
+        
+        var standard_days = CA.techservices.timesheet.TimeRowUtils.daysInOrder;
+        
+        var first_days = Ext.Array.slice(standard_days, weekStart, 7);
+        var second_days = Ext.Array.slice(standard_days, 0, weekStart);
+        
+        return Ext.Array.push(first_days, second_days);
+        
+    },
+    
     _getColumns: function() {
         var me = this,
             columns = [];
@@ -170,8 +185,8 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             }
         ]);
-       
-        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
+        
+        Ext.Array.each( this._getOrderedDaysBasedOnWeekStart(this.weekStart), function(day) {
             columns.push(this._getColumnForDay(day));
         },this);
         
@@ -246,28 +261,68 @@ Ext.define('CA.techservices.TimeTable', {
         
         return config;
     },
+    
+    _getTimeEntryItemSets: function(time_entry_items) {
+        var time_entry_item_sets = {};
+        Ext.Array.each(time_entry_items, function(item){
+            var oid = item.get('Task') && item.get('Task').ObjectID;
+            if ( Ext.isEmpty(oid) ) {
+                oid = item.get('WorkProduct') && item.get('WorkProduct').ObjectID;
+            }
+            if ( Ext.isEmpty(oid) ) {
+                oid = item.get('Project') && item.get('Project').ObjectID;
+            }
             
-    _createRows: function(time_entry_items, time_entry_values) {
-        var rows = [];
+            if ( Ext.isEmpty(time_entry_item_sets[oid]) ) {
+                time_entry_item_sets[oid] = [];
+            }
+            time_entry_item_sets[oid].push(item);
+        });
         
-        Ext.Array.map(time_entry_items, function(time_entry_item){
-            var oid = time_entry_item.get('ObjectID');
-            var values_for_time_entry_item =  Ext.Array.filter(time_entry_values, function(time_entry_value){
-                return time_entry_value.get('TimeEntryItem').ObjectID == oid;
+        return Ext.Object.getValues(time_entry_item_sets);
+    },
+    
+    _createRows: function(time_entry_items, time_entry_values) {
+        var rows = [],
+            me = this;
+        
+        // in Rally, a time row has to start on Sunday, so we'll have up to two
+        // time entry items for every row if the week starts on a different day
+        var time_entry_item_sets = this._getTimeEntryItemSets(time_entry_items);
+        
+        Ext.Array.map(time_entry_item_sets, function(item_set){
+            var item_values = [];
+            
+            Ext.Array.each(item_set, function(time_entry_item) {
+                var oid = time_entry_item.get('ObjectID');
+                var values_for_time_entry_item =  Ext.Array.filter(time_entry_values, function(time_entry_value){
+                    return time_entry_value.get('TimeEntryItem').ObjectID == oid;
+                });
+                
+                item_values = Ext.Array.push(item_values, values_for_time_entry_item);
             });
             
             rows.push(Ext.create('CA.techservices.timesheet.TimeRow',{
-                TimeEntryItemRecords: [time_entry_item],
-                TimeEntryValueRecords: values_for_time_entry_item
+                WeekStartDate: me.startDate,
+                TimeEntryItemRecords: item_set,
+                TimeEntryValueRecords: item_values
             }));
         });
         
         return rows;
     },
     
-    
     _loadTimeEntryItems: function() {
         this.setLoading('Loading time entry items...');
+        
+        var filters = [{property:'User.ObjectID',value:this.timesheetUser.ObjectID}];
+        
+        if ( this.weekStart === 0 ) {
+            filters.push({property:'WeekStartDate',value:this.startDate});
+        } else {
+            filters.push({property:'WeekStartDate', operator: '>=', value:Rally.util.DateTime.add(this.startDate, 'day', -6)});
+            filters.push({property:'WeekStartDate', operator: '<=', value:Rally.util.DateTime.add(this.startDate,'day',6)});
+        }
         
         var config = {
             model: 'TimeEntryItem',
@@ -275,10 +330,7 @@ Ext.define('CA.techservices.TimeTable', {
                 project: null
             },
             fetch: this.time_entry_item_fetch,
-            filters: [
-                {property:'WeekStartDate',value:this.startDate},
-                {property:'User.ObjectID',value:this.timesheetUser.ObjectID}
-            ]
+            filters: filters
         };
         
         return TSUtilities.loadWsapiRecords(config);
@@ -287,16 +339,22 @@ Ext.define('CA.techservices.TimeTable', {
     _loadTimeEntryValues: function() {
         this.setLoading('Loading time entry values...');
 
+        var filters = [{property:'TimeEntryItem.User.ObjectID',value:this.timesheetUser.ObjectID}];
+        
+        if ( this.weekStart === 0 ) {
+            filters.push({property:'TimeEntryItem.WeekStartDate',value:this.startDate});
+        } else {
+            filters.push({property:'TimeEntryItem.WeekStartDate', operator: '>=', value:Rally.util.DateTime.add(this.startDate, 'day', -6)});
+            filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:Rally.util.DateTime.add(this.startDate,'day',6)});
+        }
+        
         var config = {
             model: 'TimeEntryValue',
             context: {
                 project: null
             },
             fetch: ['DateVal','Hours','TimeEntryItem','ObjectID'],
-            filters: [
-                {property:'TimeEntryItem.WeekStartDate',value:this.startDate},
-                {property:'TimeEntryItem.User.ObjectID',value:this.timesheetUser.ObjectID}
-            ]
+            filters: filters
         };
         
         return TSUtilities.loadWsapiRecords(config);        

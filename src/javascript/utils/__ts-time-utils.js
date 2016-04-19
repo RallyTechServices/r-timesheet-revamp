@@ -1,18 +1,31 @@
 Ext.define('TSDateUtils', {
     singleton: true,
     
-    getBeginningOfWeekForLocalDate: function(week_date) {
-        var start_of_week_here = Ext.Date.add(week_date, Ext.Date.DAY, -1 * week_date.getDay());
+    getBeginningOfWeekForLocalDate: function(week_date,weekStartDay) {
+        if ( Ext.isEmpty(weekStartDay) ) { weekStartDay = 0; }
+        
+        var dayInWeek = week_date.getDay();
+        var delta = weekStartDay - dayInWeek;
+        if ( dayInWeek < weekStartDay ) {
+            delta = weekStartDay - dayInWeek - 7;
+        }
+                
+        var start_of_week_here = Ext.Date.add(week_date, Ext.Date.DAY, delta);
         return start_of_week_here;
     },
     
-    getBeginningOfWeekISOForLocalDate: function(week_date,showShiftedTimeStamp) {
+    getBeginningOfWeekISOForLocalDate: function(week_date,showShiftedTimeStamp,weekStartDay) {
         var offset = week_date.getTimezoneOffset();  // 480 is pacific, -330 is india
+        console.log(week_date, showShiftedTimeStamp, weekStartDay);
         
-        var local_beginning = TSDateUtils.getBeginningOfWeekForLocalDate(week_date);
+        if ( Ext.isEmpty(weekStartDay) ) {
+            weekStartDay = 0;
+        }
+        
+        var local_beginning = TSDateUtils.getBeginningOfWeekForLocalDate(week_date,weekStartDay);
         var shifted_time = Rally.util.DateTime.add(week_date,'minute',offset);
                 
-        if ( shifted_time.getUTCDay() === 0 && shifted_time.getHours() === 0  ) {
+        if ( shifted_time.getUTCDay() === weekStartDay && shifted_time.getHours() === 0  ) {
             // this is already the beginning of the week
             var shifted_string = this.formatShiftedDate(week_date, 'Y-m-d');
             if ( showShiftedTimeStamp ) {

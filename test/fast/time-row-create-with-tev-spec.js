@@ -51,6 +51,23 @@ describe("Time Row Creation By Time Entry Values Tests", function() {
         expect(row.get('Saturday')) .toEqual(4);
         expect(row.get('Total'))    .toEqual(10);
     });
+
+        
+    it('should create values based on CA TEV if starting on Monday', function(){
+        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
+            WeekStartDate: Rally.util.DateTime.add(sunday_in_utc, 'day', 1),
+            TimeEntryValueRecords: [ sunday_tev, tuesday_tev, thursday_tev, saturday_tev, following_sunday_tev, following_tuesday_tev ]
+        });
+        
+        expect(row.get('Sunday'))   .toEqual(6);
+        expect(row.get('Monday'))   .toEqual(0);
+        expect(row.get('Tuesday'))  .toEqual(2);
+        expect(row.get('Wednesday')).toEqual(0);
+        expect(row.get('Thursday')) .toEqual(3);
+        expect(row.get('Friday'))   .toEqual(0);
+        expect(row.get('Saturday')) .toEqual(4);
+        expect(row.get('Total'))    .toEqual(15);
+    });
     
     it('should create values based on CA TEV if starting on Tuesday', function(){
         var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
@@ -58,15 +75,31 @@ describe("Time Row Creation By Time Entry Values Tests", function() {
             TimeEntryValueRecords: [ sunday_tev, tuesday_tev, thursday_tev, saturday_tev, following_sunday_tev, following_tuesday_tev ]
         });
         
-        // ignore the first week's Sunday, Tuesday and the second week's Thursday
+        // ignore the first week's Sunday and the second week's Tuesday & Thursday
         expect(row.get('Sunday'))   .toEqual(6);
         expect(row.get('Monday'))   .toEqual(0);
-        expect(row.get('Tuesday'))  .toEqual(8);
+        expect(row.get('Tuesday'))  .toEqual(2);
         expect(row.get('Wednesday')).toEqual(0);
         expect(row.get('Thursday')) .toEqual(3);
         expect(row.get('Friday'))   .toEqual(0);
         expect(row.get('Saturday')) .toEqual(4);
-        expect(row.get('Total'))    .toEqual(21);
+        expect(row.get('Total'))    .toEqual(15);
     });
     
+    it('should create values based on CA TEV if starting on Tuesday and no value for this week', function(){
+        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
+            WeekStartDate: Rally.util.DateTime.add(sunday_in_utc, 'day', 2),
+            TimeEntryValueRecords: [ sunday_tev, tuesday_tev, thursday_tev, saturday_tev, following_tuesday_tev ]
+        });
+        
+        // ignore the first week's Sunday, Tuesday and the second week's Thursday
+        expect(row.get('Sunday'))   .toEqual(0);
+        expect(row.get('Monday'))   .toEqual(0);
+        expect(row.get('Tuesday'))  .toEqual(2);
+        expect(row.get('Wednesday')).toEqual(0);
+        expect(row.get('Thursday')) .toEqual(3);
+        expect(row.get('Friday'))   .toEqual(0);
+        expect(row.get('Saturday')) .toEqual(4);
+        expect(row.get('Total'))    .toEqual(9);
+    });
 });

@@ -1,4 +1,13 @@
 // Feb 7, 2016 is a sunday
+var previous_sunday_in_utc = (new Date(Date.UTC(2016, 0, 31, 0, 0, 0)));    
+var previous_sunday_local  = new Date(2016,0, 31);
+var previous_sunday_local_DST  = new Date(2016,2,6);
+
+var previous_monday_in_utc = (new Date(Date.UTC(2016, 1, 1, 0, 0, 0)));    
+var previous_monday_in_utc_DST = (new Date(Date.UTC(2016, 2, 7, 0, 0, 0)));    
+var previous_monday_local  = new Date(2016,1,1);
+var previous_monday_local_DST = new Date(2016,2,7);
+
 var sunday_in_utc = (new Date(Date.UTC(2016, 1, 7, 0, 0, 0)));    
 var sunday_local  = new Date(2016,1,7);
 var sunday_local_DST  = new Date(2016,2,13);

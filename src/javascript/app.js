@@ -12,14 +12,24 @@ Ext.define("TSTimesheet", {
     integrationHeaders : {
         name : "TSTimesheet"
     },
-                        
+    
+    config: {
+        defaultSettings: {
+            /* 0=sunday, 6=saturday */
+            weekStartsOn: 0 
+        }
+    },
+    
     launch: function() {
         this._addSelectors(this.down('#selector_box'));
     },
+    
     _addSelectors: function(container) {
         container.removeAll();
-        
         container.add({xtype:'container',flex: 1});
+        
+        var week_starts_on = this.getSetting('weekStartsOn');
+        this.logger.log('Week Start:', week_starts_on);
         
         container.add({
             xtype:'rallydatefield',
@@ -28,11 +38,11 @@ Ext.define("TSTimesheet", {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value);
+                    var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value,week_starts_on);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
                     }
-                    if ( new_value.getDay() === 0 ) {
+                    if ( new_value.getDay() === week_starts_on ) {
                         this.updateData();
                     }
                 }
@@ -68,6 +78,33 @@ Ext.define("TSTimesheet", {
                 }
             }
         });
+    },
+
+    getSettingsFields: function() {
+        var days_of_week = [
+            {Name:'Sunday', Value:0},
+            {Name:'Monday', Value:1},
+            {Name:'Tuesday', Value:2},
+            {Name:'Wednesday', Value:3},
+            {Name:'Thursday', Value:4},
+            {Name:'Friday', Value:5},
+            {Name:'Saturday', Value:6}
+        ];
+        
+        return [{
+            name: 'weekStartsOn',
+            xtype: 'rallycombobox',
+            fieldLabel: 'Week Starts On',
+            labelWidth: 100,
+            labelAlign: 'left',
+            minWidth: 200,
+            displayField:'Name',
+            valueField: 'Value',
+            store: Ext.create('Rally.data.custom.Store',{
+                data: days_of_week
+            }),
+            readyEvent: 'ready'
+        }];
     },
     
     getOptions: function() {

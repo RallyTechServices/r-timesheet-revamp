@@ -5,12 +5,16 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     
     dayShortNames: {'Sunday':'Sun','Monday':'Mon','Tuesday':'Tues','Wednesday':'Wed','Thursday':'Thur','Friday':'Fri','Saturday':'Sat'},
     
+    getDayOfWeekFromDate: function(jsdate) {
+        return jsdate.getUTCDay();
+    },
+    
     getDayOfWeek: function(value, record) {
         var week_start_date =  record.get('WeekStartDate');
         if ( Ext.isEmpty( week_start_date ) ) {
             return 0;
         }
-        return week_start_date.getUTCDay();
+        return CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(week_start_date);
     },
     
     getFieldFromTimeEntryItems: function(value,record,field_name){
@@ -34,12 +38,18 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  record.get('WeekStartDate');
+        if ( Ext.isEmpty(week_start_date) ) { return 0; }
+        
+        var week_end_date = Rally.util.DateTime.add(week_start_date, 'week', 1);
+        
         var time_entry_values = record.get('TimeEntryValueRecords');
         
         var day_value = 0;
         Ext.Array.each(time_entry_values, function(time_entry_value){
             var tev_day = time_entry_value.get('DateVal').getUTCDay();
-            if ( tev_day == index && time_entry_value.get('DateVal') >= week_start_date ) {
+            var tev_date = time_entry_value.get('DateVal');
+            
+            if ( tev_day == index && tev_date >= week_start_date && tev_date < week_end_date ) {
                 day_value = time_entry_value.get('Hours');
             }
         });
@@ -155,7 +165,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             me = this,
             changes = this.getChanges();
         
-        console.log('--', this, v, changes);
         var promises = [];
         Ext.Object.each(changes, function(field, value) {
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
@@ -189,9 +198,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  this.get('WeekStartDate');
         var time_entry_values = this.get('TimeEntryValueRecords');
-        
-        console.log('looking for', day_name, index, week_start_date, time_entry_values);
-        
+                
         var day_value = null;
         Ext.Array.each(time_entry_values, function(time_entry_value){
             var tev_day = time_entry_value.get('DateVal').getUTCDay();
