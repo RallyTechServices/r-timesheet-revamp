@@ -237,12 +237,21 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             getEditor: editor_config, 
-            summaryType: 'sum'
+            summaryType: 'sum',
+            renderer: function(value,meta,record) {
+                if ( value === 0 ) {
+                    return "";
+                } 
+                return value;
+            }
         };
         
         if ( day == "Saturday" || day == "Sunday" ) {
             config.renderer = function(value, meta, record) {
                 meta.tdCls = "ts-weekend-cell";
+                if ( value === 0 ) {
+                    return "";
+                }
                 return value;
             };
         }

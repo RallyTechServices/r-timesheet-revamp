@@ -192,11 +192,12 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         });
         
         return Deft.Chain.sequence(promises,this);
-        //return deferred.promise;
     },
     
     _changeDayValue: function(day, value) {
-        var deferred = Ext.create('Deft.Deferred');
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+            
         var time_entry_value = this._getTimeEntryValue(day);
         
         if ( Ext.isEmpty(time_entry_value) ) {            
@@ -204,9 +205,12 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         }
         
         time_entry_value.set('Hours',value);
+        // recalculate total
+        this.set('Total', 0);
+        
         time_entry_value.save({
-            callback: function(results, operation, success) {
-                deferred.resolve(results);
+            callback: function(result) {
+                deferred.resolve(result);
             }
         });
         
@@ -219,9 +223,12 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var time_entry_values = this.get('TimeEntryValueRecords');
                 
         var day_value = null;
+        var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
+        
         Ext.Array.each(time_entry_values, function(time_entry_value){
-            var tev_day = time_entry_value.get('DateVal').getUTCDay();
-            if ( tev_day == index && time_entry_value.get('DateVal') >= week_start_date ) {
+            var delta = Rally.util.DateTime.getDifference(time_entry_value.get('DateVal'), value_date, 'day');
+            
+            if (delta === 0 ) {
                 day_value = time_entry_value;
             }
         });
@@ -232,8 +239,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
     _createTimeEntryValue: function(day_name, value) {
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
-        console.log('_createTimeEntryValue', day_name, value);
-        console.log(this.get('WeekStartDate'), this.get('WeekStart'));
         
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
         var time_entry_item = null;
@@ -314,8 +319,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                     TimeEntryItem: { _ref: time_entry_item.get('_ref') },
                     DateVal: TSDateUtils.formatShiftedDate(value_date,'Y-m-d') + 'T00:00:00.000Z'
                 });
-
-                console.log('saving time entry value', tev, time_entry_item);
                 
                 tev.save({
                     callback: function(result, operation) {
@@ -326,11 +329,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                             records.push(result);
                             me.set('TimeEntryValueRecords', records);
                             
-                            console.log('result', result, me.get('TimeEntryValueRecords'));
                             me.set('Total', 0); // updates the total automatically
                             deferred.resolve(result);    
                         } else {
-                            row.set(day_name, 0);
+                            me.set(day_name, 0);
                             console.log('Operation:',operation);
                             throw 'Problem saving time entry value';
                             deferred.reject(operation.error && operation.error.errors.join('.'));
