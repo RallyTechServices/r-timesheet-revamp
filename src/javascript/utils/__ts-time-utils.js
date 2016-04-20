@@ -16,7 +16,6 @@ Ext.define('TSDateUtils', {
     
     getBeginningOfWeekISOForLocalDate: function(week_date,showShiftedTimeStamp,weekStartDay) {
         var offset = week_date.getTimezoneOffset();  // 480 is pacific, -330 is india
-        console.log(week_date, showShiftedTimeStamp, weekStartDay);
         
         if ( Ext.isEmpty(weekStartDay) ) {
             weekStartDay = 0;

@@ -123,18 +123,6 @@ Ext.define('CA.techservices.TimeTable', {
         this.fireEvent('gridReady', this, this.grid);
     },
     
-    _getOrderedDaysBasedOnWeekStart: function(weekStart) {
-        if ( weekStart === 0 ) { return CA.techservices.timesheet.TimeRowUtils.daysInOrder; }
-        
-        var standard_days = CA.techservices.timesheet.TimeRowUtils.daysInOrder;
-        
-        var first_days = Ext.Array.slice(standard_days, weekStart, 7);
-        var second_days = Ext.Array.slice(standard_days, 0, weekStart);
-        
-        return Ext.Array.push(first_days, second_days);
-        
-    },
-    
     _getColumns: function() {
         var me = this,
             columns = [];
@@ -186,7 +174,7 @@ Ext.define('CA.techservices.TimeTable', {
             }
         ]);
         
-        Ext.Array.each( this._getOrderedDaysBasedOnWeekStart(this.weekStart), function(day) {
+        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day) {
             columns.push(this._getColumnForDay(day));
         },this);
         

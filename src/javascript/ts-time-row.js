@@ -65,6 +65,25 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         });
         
         return total;
+    },
+    
+    getOrderedDaysBasedOnWeekStart: function(week_start_day) {
+        if ( week_start_day === 0 ) { return CA.techservices.timesheet.TimeRowUtils.daysInOrder; }
+        
+        var standard_days = CA.techservices.timesheet.TimeRowUtils.daysInOrder;
+        
+        var first_days = Ext.Array.slice(standard_days, week_start_day, 7);
+        var second_days = Ext.Array.slice(standard_days, 0, week_start_day);
+        
+        return Ext.Array.push(first_days, second_days);
+        
+    },
+    
+    getValueFromDayOfWeek: function(week_start_date, week_start_day, day_name) {
+        var days_in_order = CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(week_start_day);
+        var index = Ext.Array.indexOf(days_in_order, day_name);
+        
+        return Rally.util.DateTime.add(week_start_date,'day',index);
     }
 });
 
@@ -168,7 +187,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var promises = [];
         Ext.Object.each(changes, function(field, value) {
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
-                return me._changeDayValue(field,value);
+                promises.push( function() { return me._changeDayValue(field,value); });
             }
         });
         
@@ -180,8 +199,8 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred');
         var time_entry_value = this._getTimeEntryValue(day);
         
-        if ( Ext.isEmpty(time_entry_value) ) {
-            return;
+        if ( Ext.isEmpty(time_entry_value) ) {            
+            return this._createTimeEntryValue(day,value);
         }
         
         time_entry_value.set('Hours',value);
@@ -208,5 +227,146 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         });
         
         return day_value;
+    },
+    
+    _createTimeEntryValue: function(day_name, value) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        console.log('_createTimeEntryValue', day_name, value);
+        console.log(this.get('WeekStartDate'), this.get('WeekStart'));
+        
+        var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
+        var time_entry_item = null;
+        Ext.Array.each(this.get('TimeEntryItemRecords'), function(item){
+            var delta = Rally.util.DateTime.getDifference(value_date, item.get('WeekStartDate'), 'day');
+            if ( value_date >= item.get('WeekStartDate') && delta < 7 ) {
+                time_entry_item = item;
+            }
+        });
+        
+        if ( Ext.isEmpty(time_entry_item) ) {
+            console.log('Could not find time entry item for date', value_date, this.get('TimeEntryItemRecords'));
+            this._createTimeEntryItem(value_date, this.get('Project'), this.get('WorkProduct'), this.get('Task') ).then({
+                scope: this,
+                success: function(result) {
+                    return this._createTimeEntryValueWithModel(day_name, value, value_date, result);
+                },
+                failure: function(msg) {
+                    console.log("Problem creating new TEI", msg);
+                    deferred.reject(msg);
+                }
+            });
+            return deferred.promise;
+        }
+        
+        return this._createTimeEntryValueWithModel(day_name, value, value_date, time_entry_item);
+    },
+    
+    _createTimeEntryItem: function(value_date, project, workproduct, task) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        
+        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date,true,0);
+        
+        var config = {
+            WeekStartDate: sunday_start,
+            Project: { _ref: project._ref }
+        };
+        
+        if ( !Ext.isEmpty(task) ) {
+            config.Task = { _ref: task._ref };
+        }
+        
+        if ( !Ext.isEmpty(workproduct) ) {
+            config.WorkProduct = { _ref: workproduct._ref };
+        }
+        
+        Rally.data.ModelFactory.getModel({
+            type: 'TimeEntryItem',
+            scope: this,
+            success: function(model) {
+                var tei = Ext.create(model,config);
+                tei.save({
+                    callback: function(result, operation) {
+                        var records = me.get('TimeEntryItemRecords') || [];
+                        records.push(result);
+                        me.set('TimeEntryItemRecords', records);
+                        deferred.resolve(result);
+                    }
+                });
+            }
+        });
+        return deferred.promise;
+    },
+    
+    _createTimeEntryValueWithModel: function(day_name, value, value_date, time_entry_item) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        
+        Rally.data.ModelFactory.getModel({
+            type: 'TimeEntryValue',
+            scope: this,
+            success: function(model) {
+                this._changeFieldRights(model);
+                
+                var tev = Ext.create(model,{
+                    Hours: value,
+                    TimeEntryItem: { _ref: time_entry_item.get('_ref') },
+                    DateVal: TSDateUtils.formatShiftedDate(value_date,'Y-m-d') + 'T00:00:00.000Z'
+                });
+
+                console.log('saving time entry value', tev, time_entry_item);
+                
+                tev.save({
+                    callback: function(result, operation) {
+                        if(operation.wasSuccessful()) {
+                            this.set(day_name, value);
+                            
+                            var records = me.get('TimeEntryValueRecords') || [];
+                            records.push(result);
+                            me.set('TimeEntryValueRecords', records);
+                            
+                            console.log('result', result, me.get('TimeEntryValueRecords'));
+                            me.set('Total', 0); // updates the total automatically
+                            deferred.resolve(result);    
+                        } else {
+                            row.set(day_name, 0);
+                            console.log('Operation:',operation);
+                            throw 'Problem saving time entry value';
+                            deferred.reject(operation.error && operation.error.errors.join('.'));
+                        }
+                    }
+                });
+                
+            }
+        });
+        return deferred.promise;
+    },
+    
+    _changeFieldRights: function(model) {
+        var fields = model.getFields();
+        Ext.Array.each(fields, function(field,idx) {
+            if ( field.name == "TimeEntryItem" ) {
+                field.readOnly = false;
+                field.persist = true;
+                field.type = 'string';                        
+            }
+            if ( field.name == "DateVal" ) {
+                // override field definition so that we can write to the 
+                // field AND pass it a string for midnight at Z instead of
+                // the local timestamp
+                fields[idx] = Ext.create('Rally.data.wsapi.Field',{
+                    type:'string',
+                    readOnly: false,
+                    persist: true,
+                    name: 'DateVal',
+                    custom: false,
+                    hidden: false,
+                    useNull: false
+                });
+            }
+        });
+        
+        return model;
     }
 });
