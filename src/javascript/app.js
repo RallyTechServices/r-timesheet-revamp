@@ -34,12 +34,15 @@ Ext.define("TSTimesheet", {
         this.logger.log('Week Start:', week_starts_on);
         
         container.add({
-            xtype:'rallydatefield',
+            xtype:'tsarroweddate',
             itemId:'date_selector',
             fieldLabel: 'Week Starting',
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
+                    console.log(new_value);
+                    if ( Ext.isEmpty(new_value) ) { return; }
+                    
                     var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value,week_starts_on);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
