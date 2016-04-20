@@ -309,6 +309,88 @@ Ext.define('CA.techservices.TimeTable', {
         return rows;
     },
     
+    addRowForItem: function(item){
+        var me = this,
+            rows = this.rows;
+        
+        if ( this._hasRowForItem(item) ) {
+            console.log("Has row already:", item);
+            return;
+        }
+        
+        console.log('Adding row for ', item);
+        
+        var item_type = item.get('_type');
+        var config = {
+            WorkProduct: {
+                _ref: item.get('_ref')
+            },
+            WeekStartDate: TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate,true,0),
+            User: {
+                _ref: '/usr/' + this.timesheetUser.ObjectID
+            }
+        };
+        
+        if ( item.get('Project') ) {
+            config.Project = item.get("Project");
+        }
+        
+        if ( item_type == "task" ) {
+            config.Task = { _ref: item.get('_ref') };
+            config.WorkProduct = { _ref: item.get('WorkProduct')._ref };
+        }
+        
+        Rally.data.ModelFactory.getModel({
+            type: 'TimeEntryItem',
+            scope: this,
+            success: function(model) {
+                var tei = Ext.create(model,config);
+                tei.save({
+                    fetch: me.time_entry_item_fetch,
+                    callback: function(result, operation) {
+                        console.log('--', operation);
+                        row = Ext.create('CA.techservices.timesheet.TimeRow',{
+                            WeekStartDate: me.startDate,
+                            TimeEntryItemRecords: [result]
+                        });
+                        
+                        me.grid.getStore().loadRecords([row], { addRecords: true });
+                        me.rows.push(row);
+                    }
+                });
+            }
+        });
+    },
+    
+    getGrid: function() {
+        return this.grid;
+    },
+    
+    _hasRowForItem: function(item) {
+        var me = this,
+            rows = this.rows,
+            hasRow = false,
+            item_type = item.get('_type');
+            
+        var store_count = this.grid.getStore().data.items.length;
+        
+        Ext.Array.each(rows, function(row) {
+            if ( row ) {
+                if ( item_type == 'task' ) {
+                    if ( row.get('Task') && row.get('Task')._ref == item.get('_ref') ) {
+                        hasRow = true;
+                    }
+                } else {
+                    if ( Ext.isEmpty(row.get('Task')) && row.get('WorkProduct') && row.get('WorkProduct')._ref == item.get('_ref') ) {
+                        hasRow = true;
+                    }
+                }
+            }
+        });
+        
+        return hasRow;
+    },
+    
     _loadTimeEntryItems: function() {
         this.setLoading('Loading time entry items...');
         

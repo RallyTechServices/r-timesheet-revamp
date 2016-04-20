@@ -243,6 +243,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
         var time_entry_item = null;
         Ext.Array.each(this.get('TimeEntryItemRecords'), function(item){
+            console.log(value_date, item.get('WeekStartDate'));
             var delta = Rally.util.DateTime.getDifference(value_date, item.get('WeekStartDate'), 'day');
             if ( value_date >= item.get('WeekStartDate') && delta < 7 ) {
                 time_entry_item = item;

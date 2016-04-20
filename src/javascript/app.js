@@ -26,6 +26,8 @@ Ext.define("TSTimesheet", {
     
     _addSelectors: function(container) {
         container.removeAll();
+        container.add({xtype:'container',itemId:'button_box'});
+        
         container.add({xtype:'container',flex: 1});
         
         var week_starts_on = this.getSetting('weekStartsOn');
@@ -50,6 +52,88 @@ Ext.define("TSTimesheet", {
         }).setValue(new Date());
     },
     
+    _addButtons: function(container) {
+        container.removeAll();
+        
+        container.add({
+            xtype:'rallybutton',
+            text: 'Add My Tasks',
+            toolTipText: "(in current iteration)", 
+            padding: 2,
+            disabled: false,
+            listeners: {
+                scope: this,
+                click: this._addCurrentTasks
+            }
+        });
+        
+//        container.add({
+//            xtype:'rallybutton',
+//            text: '+<span class="icon-task"> </span>',
+//            disabled: true,
+//            toolTipText: "Search and add Tasks", 
+//            listeners: {
+//                scope: this,
+//                click: this._findAndAddTask
+//            }
+//        });
+//        
+//        container.add({
+//            xtype:'rallybutton',
+//            text: '+<span class="icon-story"> </span>',
+//            toolTipText: "Search and add User Stories",
+//            disabled: true,
+//            listeners: {
+//                scope: this,
+//                click: this._findAndAddStory
+//            }
+//        });
+        
+    },
+    
+    _addCurrentTasks: function() {
+        var timetable = this.down('tstimetable');
+        if (timetable) {
+            this.setLoading("Finding my current tasks...");
+            
+            var config = {
+                model: 'Task',
+                context: {
+                    project: null
+                },
+                fetch:  ['ObjectID','Name','FormattedID','WorkProduct','Project'],
+                filters: [
+                    {property:'Owner.ObjectID',value:this.getContext().getUser().ObjectID},
+                    {property:'Iteration.StartDate',operator: '<=', value:Rally.util.DateTime.toIsoString(this.startDate)},
+                    {property:'Iteration.EndDate',  operator: '>=', value:Rally.util.DateTime.toIsoString(this.startDate)}
+                ]
+            };
+            
+            TSUtilities.loadWsapiRecords(config).then({
+                scope: this,
+                success: function(tasks) {
+                    var new_item_count = tasks.length;
+                    var current_count  = timetable.getGrid().getStore().getTotalCount();
+                    
+                    if ( current_count + new_item_count > 100 ) {
+                        Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        this.setLoading(false);
+                    } else {
+                        Ext.Array.each(tasks, function(task){
+                            timetable.addRowForItem(task);
+                        });
+                    }
+                    
+                    this.setLoading(false);
+                    
+                },
+                failure: function(msg) {
+                    Ext.Msg.alert("Problem loading current tasks", msg);
+                }
+            });
+        }
+    },
+    
     updateData: function() {
         var me = this;
         var timetable  = this.down('tstimetable');
@@ -69,12 +153,7 @@ Ext.define("TSTimesheet", {
             listeners: {
                 scope: this,
                 gridReady: function() {
-//                    this._addButtons(button_box);
-//                    if ( editable ) {
-//                        Ext.Array.each( this.query('rallybutton'), function(button) {
-//                            button.setDisabled(false);
-//                        });
-//                    }
+                    this._addButtons(this.down('#button_box'));
                 }
             }
         });

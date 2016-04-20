@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Apr 19 2016 20:41:15 GMT-0700 (MST) -->
+    <!--  Build Date: Tue Apr 19 2016 21:31:22 GMT-0700 (MST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Apr 19 2016 20:41:15 GMT-0700 (MST)";
-        var CHECKSUM = 45250522967;
+        var APP_BUILD_DATE = "Tue Apr 19 2016 21:31:22 GMT-0700 (MST)";
+        var CHECKSUM = 79407407751;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -508,139 +508,416 @@ Ext.define('TSDateUtils', {
     }
 });
 
-Ext.define("TSTimesheet", {
-    extend: 'Rally.app.App',
-    componentCls: 'app',
-    logger: new Rally.technicalservices.Logger(),
-    defaults: { margin: 10 },
-    layout: 'border',
-    
-    items: [
-        {xtype:'container', itemId:'selector_box', region: 'north',  layout: { type:'hbox' }, minHeight: 25}
-    ],
+/**
+ * A dialog that displays artifacts to choose from
+ *
+ */
+Ext.define('Rally.technicalservices.ChooserDialog', {
+    extend: 'Rally.ui.dialog.Dialog',
+    alias:'widget.tschooserdialog',
 
-    integrationHeaders : {
-        name : "TSTimesheet"
-    },
+    clientMetrics: [{
+        beginEvent:'beforeshow',
+        endEvent:'show',
+        description:'dialog shown'
+    }],
+
+    width: 800,
+    closable: true,
+
+    searchContext: 'project',
     
     config: {
-        defaultSettings: {
-            /* 0=sunday, 6=saturday */
-            weekStartsOn: 0 
-        }
-    },
-    
-    launch: function() {
-        this._addSelectors(this.down('#selector_box'));
-    },
-    
-    _addSelectors: function(container) {
-        container.removeAll();
-        container.add({xtype:'container',flex: 1});
+        /**
+         * @cfg {String}
+         * Title to give to the dialog
+         */
+        title: 'Choose an Artifact',
+        /**
+         * @cfg {Array} (required)
+         * List of artifact types to allow the user to choose from
+         */
+        artifactTypes: [],
+        /**
+         * @cfg {Boolean}
+         * Allow multiple selection or not
+         */
+        multiple: false,
+
+        /**
+         * @cfg {Object}
+         * An {Ext.data.Store} config object used when building the grid
+         * Handy when you need to limit the selection with store filters
+         */
+        storeConfig: { },
+
+        /**
+         * @cfg {Object}
+         * The list of filter configs that will appear in the filter combobox
+         * Each list element should include a displayName and an attributeName property,
+         * where the attributeName is the name of wsapi queryable attribute:
+         *     {
+         *         displayName: 'Formatted ID',
+         *         attributeName: 'FormattedID'
+         *     }
+         */
+        filterableFields: [],
+
+        /**
+         * @cfg {Ext.grid.Column}
+         * List of columns that will be used in the chooser
+         */
+        columns : [],
+
+        /**
+         * @cfg [{String}]
+         * List of field names to fetch when getting the objects
+         */
+        fetchFields: [],
         
-        var week_starts_on = this.getSetting('weekStartsOn');
-        this.logger.log('Week Start:', week_starts_on);
-        
-        container.add({
-            xtype:'rallydatefield',
-            itemId:'date_selector',
-            fieldLabel: 'Week Starting',
-            listeners: {
-                scope: this,
-                change: function(dp, new_value) {
-                    var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value,week_starts_on);
-                    if ( week_start !== new_value ) {
-                        dp.setValue(week_start);
-                    }
-                    if ( new_value.getDay() === week_starts_on ) {
-                        this.updateData();
-                    }
-                }
-            }
-        }).setValue(new Date());
-    },
-    
-    updateData: function() {
-        var me = this;
-        var timetable  = this.down('tstimetable');
-        if ( ! Ext.isEmpty(timetable) ) { timetable.destroy(); }
-        
-        this.startDate = this.down('#date_selector').getValue();
-        
-        var editable = true;
-        
-        this.time_table = this.add({ 
-            xtype: 'tstimetable',
-            region: 'center',
-            layout: 'fit',
-            margin: 15,
-            startDate: this.startDate,
-            editable: editable,
-            listeners: {
-                scope: this,
-                gridReady: function() {
-//                    this._addButtons(button_box);
-//                    if ( editable ) {
-//                        Ext.Array.each( this.query('rallybutton'), function(button) {
-//                            button.setDisabled(false);
-//                        });
-//                    }
-                }
-            }
-        });
+        /**
+         * @cfg {String}
+         * Text to be displayed on the button when selection is complete
+         */
+        selectionButtonText: 'Done',
+
+        /**
+         * @cfg {Object}
+         * The grid configuration to be used when creative the grid of items in the dialog
+         */
+        gridConfig: {},
+
+        /**
+         * @cfg {String}
+         * The ref of a record to select when the chooser loads
+         */
+        selectedRef: undefined
+
+        /**
+         * @private
+         * @cfg userAction {String} (Optional)
+         * The client metrics action to record when the user makes a selection and clicks done
+         */
     },
 
-    getSettingsFields: function() {
-        var days_of_week = [
-            {Name:'Sunday', Value:0},
-            {Name:'Monday', Value:1},
-            {Name:'Tuesday', Value:2},
-            {Name:'Wednesday', Value:3},
-            {Name:'Thursday', Value:4},
-            {Name:'Friday', Value:5},
-            {Name:'Saturday', Value:6}
-        ];
-        
-        return [{
-            name: 'weekStartsOn',
-            xtype: 'rallycombobox',
-            fieldLabel: 'Week Starts On',
-            labelWidth: 100,
-            labelAlign: 'left',
-            minWidth: 200,
-            displayField:'Name',
-            valueField: 'Value',
-            store: Ext.create('Rally.data.custom.Store',{
-                data: days_of_week
-            }),
-            readyEvent: 'ready'
-        }];
-    },
-    
-    getOptions: function() {
-        return [
+    items: {
+        xtype: 'panel',
+        border: false,
+        items: [
             {
-                text: 'About...',
-                handler: this._launchInfo,
-                scope: this
+                xtype: 'container',
+                itemId: 'gridContainer',
+                layout: 'fit',
+                height: 400
             }
-        ];
+        ]
+    },
+
+    constructor: function(config) {
+        this.mergeConfig(config);
+
+        this.callParent([this.config]);
+    },
+
+    initComponent: function() {
+        this.callParent(arguments);
+        this.addEvents(
+            /**
+             * @event artifactChosen
+             * Fires when user clicks done after choosing an artifact
+             * @param {Rally.technicalservices.ChooserDialog} this dialog
+             * @param {Rally.domain.WsapiModel} selected record or an array of selected records if multiple is true
+             */
+            'artifactChosen'
+        );
+
+        this.addCls('chooserDialog');
+
+        this._buildButtons();
+        this._buildSearchBar();
+
+        Rally.data.ModelFactory.getModels({
+            types: this.artifactTypes,
+            success: function(models) {
+
+                if (this.artifactTypes.length > 1) {
+                    this._setupComboBox(models);
+                }
+
+                this._buildGrid(models[this.artifactTypes[0]]);
+
+            },
+            scope: this
+        });
+
+    },
+
+    /**
+     * @private
+     */
+    _buildButtons: function() {
+
+        this.down('panel').addDocked({
+            xtype: 'toolbar',
+            dock: 'bottom',
+            padding: '0 0 10 0',
+            layout: {
+                type: 'hbox',
+                pack: 'center'
+            },
+            ui: 'footer',
+            items: [
+                {
+                    xtype: 'rallybutton',
+                    text: this.selectionButtonText,
+                    cls: 'primary small',
+                    scope: this,
+                    userAction: 'clicked done in dialog',
+                    handler: function() {
+                        var selectedRecords = this._getSelectedRecords();
+                        if (!this.multiple) {
+                            selectedRecords = selectedRecords[0];
+                        }
+                        this.fireEvent('artifactChosen', this, selectedRecords);
+                        this.close();
+                    }
+                },
+                {
+                    xtype: 'rallybutton',
+                    text: 'Cancel',
+                    cls: 'secondary small',
+                    handler: this.close,
+                    scope: this,
+                    ui: 'link'
+                }
+            ]
+        });
+
+    },
+
+    /**
+     * @private
+     */
+    _buildSearchBar: function() {
+
+        var filterTypeComboBox = Ext.create('Ext.form.field.ComboBox', {
+            itemId: 'filterTypeComboBox',
+            queryMode: 'local',
+            store: Ext.create('Ext.data.Store', {
+                fields: ['attributeName', 'displayName'],
+                data: this.filterableFields
+            }),
+            displayField: 'displayName',
+            valueField: 'attributeName',
+            editable: false
+        });
+
+        filterTypeComboBox.select(filterTypeComboBox.getStore().getAt(1));
+
+        this.addDocked({
+            xtype: 'toolbar',
+            itemId: 'searchBar',
+            dock: 'top',
+            items: [
+                filterTypeComboBox,
+                {
+                    xtype: 'textfield',
+                    itemId: 'searchTerms',
+                    emptyText: 'enter search terms',
+                    flex: 1,
+                    enableKeyEvents: true,
+                    listeners: {
+                        keyup: function(textField, event) {
+                            if (event.getKey() === Ext.EventObject.ENTER) {
+                                this._search();
+                            }
+                        },
+                        scope: this
+                    }
+                },
+                {
+                    xtype: 'button',
+                    text: '<span class="icon-search"> </span>',
+                    handler: this._openSearchMenu,
+                    scope: this
+                }
+            ]
+        });
     },
     
-    _launchInfo: function() {
-        if ( this.about_dialog ) { this.about_dialog.destroy(); }
-        this.about_dialog = Ext.create('Rally.technicalservices.InfoLink',{});
+    /**
+     * @private
+     * @param {Object} models Object with {Rally.domain.WsapiModel} items
+     *
+     */
+    _setupComboBox: function(models) {
+        var searchBar = this.down('#searchBar');
+        var combo = Ext.create('Ext.form.field.ComboBox', {
+            xtype: 'combo',
+            name: 'filterType',
+            queryMode: 'local',
+            store: Ext.create('Ext.data.Store', {
+                fields: ['typeName', 'displayName', 'wsapiModel']
+            }),
+            displayField: 'displayName',
+            valueField: 'typeName',
+            editable: false
+        });
+        searchBar.insert(0, combo);
+
+        Ext.Object.each(models, function(key, model) {
+            combo.getStore().add({
+                typeName: model.typePath,
+                displayName: model.displayName,
+                wsapiModel: model
+            });
+        }, this);
+
+        combo.select(combo.getStore().getAt(0));
+
+        combo.on('select', function(comboBox, options) {
+            var option = options[0];
+            this.grid.reconfigureWithModel(option.get('wsapiModel'));
+        }, this);
+
     },
-    
-    isExternal: function(){
-        return typeof(this.getAppId()) == 'undefined';
+
+    /**
+     * @private
+     * @param {Rally.domain.WsapiModel}
+     *
+     */
+    _buildGrid: function(model) {
+
+        var mode = this.multiple ? 'MULTI' : 'SINGLE';
+        this.selectionModel = Ext.create('Rally.ui.selection.CheckboxModel', {
+            mode: mode,
+            allowDeselect: true
+        });
+
+        var store_config = this.storeConfig;
+        store_config.context = { project: Rally.getApp().getContext().getProjectRef()};
+        
+        var new_fetch = Ext.Array.merge(['ObjectID'],this.fetchFields);
+        var current_fetch = store_config.fetch || [];
+        
+        store_config.fetch = Ext.Array.merge(new_fetch,current_fetch);
+        
+        var gridConfig = Ext.Object.merge({
+            model: model,
+            selModel: this.selectionModel,
+            autoAddAllModelFieldsAsColumns: false,
+            enableEditing: false,
+            enableColumnHide: false,
+            enableColumnMove: false,
+            columnCfgs: this.columns,
+            storeConfig: store_config,
+            showRowActionsColumn: false,
+            viewConfig: {
+                emptyText: Rally.ui.EmptyTextFactory.get('defaultText')
+            }
+        }, this.config.gridConfig);
+
+        this.grid = Ext.create('Rally.ui.grid.Grid', gridConfig);
+        this.mon(this.grid, 'load', this._onGridLoad, this);
+        this.down('#gridContainer').add(this.grid);
+        this._onGridReady();
     },
-    
-    //onSettingsUpdate:  Override
-    onSettingsUpdate: function (settings){
-        this.logger.log('onSettingsUpdate',settings);
-        // Ext.apply(this, settings);
-        this.launch();
+
+    _onGridReady: function() {
+        if (!this.grid.rendered) {
+            this.mon(this.grid, 'afterrender', this._onGridReady, this, {single: true});
+            return;
+        }
+
+        if (this.grid.getStore().isLoading()) {
+            this.mon(this.grid, 'load', this._onGridReady, this, {single: true});
+            return;
+        }
+
+        this._onGridLoad();
+        this.center();
+
+        if (Rally.BrowserTest) {
+            Rally.BrowserTest.publishComponentReady(this);
+        }
+    },
+
+    _onGridLoad: function() {
+        if(this.getSelectedRef()){
+            var recordIndex = this.grid.getStore().find('_ref', this.getSelectedRef());
+            if(recordIndex !== -1){
+                var record = this.grid.getStore().getAt(recordIndex);
+                this.grid.getSelectionModel().select(record);
+            }
+        }
+    },
+
+    /**
+     * @private
+     * @return {Rally.data.Model}
+     */
+    _getSelectedRecords: function() {
+        return this.selectionModel.getSelection();
+    },
+
+    /**
+     * @private
+     */
+    _search: function() {
+        
+        var terms = this.down('#searchTerms').getValue();
+        var filterBy = this.down('#filterTypeComboBox').getValue();
+        var filter;
+        
+        var store_config = this.grid.storeConfig;
+        
+        store_config.context = { project: Rally.getApp().getContext().getProjectRef() };
+        
+        if ( this.searchContext == "workspace" ) {
+            store_config.context = { project: null };
+        }
+        
+        var store = this.grid.getStore();        
+        store.context = store_config.context;
+        
+        if (!Ext.isEmpty(terms)) {
+            filter = Ext.create('Rally.data.wsapi.Filter', {
+                property: filterBy,
+                value: terms,
+                operator: 'Contains'
+            });
+        }
+
+        this.grid.filter(filter, true);
+    },
+
+    _openSearchMenu: function(button) {
+        var menu = Ext.widget({
+            xtype: 'rallymenu',
+            items: [
+                { 
+                    text: 'Search Selected Project',
+                    handler: function() {
+                        this.searchContext = 'project';
+                        this._search();
+                    },
+                    scope: this
+                },
+                { 
+                    text: 'Search Everywhere',
+                    handler: function() {
+                        this.searchContext = 'workspace';
+                        this._search();
+                    },
+                    scope: this
+                }
+            ]
+        });
+        menu.showBy(button.getEl());
+        if(button.toolTip) {
+            button.toolTip.hide();
+        }
     }
 });
 
@@ -889,6 +1166,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
         var time_entry_item = null;
         Ext.Array.each(this.get('TimeEntryItemRecords'), function(item){
+            console.log(value_date, item.get('WeekStartDate'));
             var delta = Rally.util.DateTime.getDifference(value_date, item.get('WeekStartDate'), 'day');
             if ( value_date >= item.get('WeekStartDate') && delta < 7 ) {
                 time_entry_item = item;
@@ -1329,6 +1607,88 @@ Ext.define('CA.techservices.TimeTable', {
         return rows;
     },
     
+    addRowForItem: function(item){
+        var me = this,
+            rows = this.rows;
+        
+        if ( this._hasRowForItem(item) ) {
+            console.log("Has row already:", item);
+            return;
+        }
+        
+        console.log('Adding row for ', item);
+        
+        var item_type = item.get('_type');
+        var config = {
+            WorkProduct: {
+                _ref: item.get('_ref')
+            },
+            WeekStartDate: TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate,true,0),
+            User: {
+                _ref: '/usr/' + this.timesheetUser.ObjectID
+            }
+        };
+        
+        if ( item.get('Project') ) {
+            config.Project = item.get("Project");
+        }
+        
+        if ( item_type == "task" ) {
+            config.Task = { _ref: item.get('_ref') };
+            config.WorkProduct = { _ref: item.get('WorkProduct')._ref };
+        }
+        
+        Rally.data.ModelFactory.getModel({
+            type: 'TimeEntryItem',
+            scope: this,
+            success: function(model) {
+                var tei = Ext.create(model,config);
+                tei.save({
+                    fetch: me.time_entry_item_fetch,
+                    callback: function(result, operation) {
+                        console.log('--', operation);
+                        row = Ext.create('CA.techservices.timesheet.TimeRow',{
+                            WeekStartDate: me.startDate,
+                            TimeEntryItemRecords: [result]
+                        });
+                        
+                        me.grid.getStore().loadRecords([row], { addRecords: true });
+                        me.rows.push(row);
+                    }
+                });
+            }
+        });
+    },
+    
+    getGrid: function() {
+        return this.grid;
+    },
+    
+    _hasRowForItem: function(item) {
+        var me = this,
+            rows = this.rows,
+            hasRow = false,
+            item_type = item.get('_type');
+            
+        var store_count = this.grid.getStore().data.items.length;
+        
+        Ext.Array.each(rows, function(row) {
+            if ( row ) {
+                if ( item_type == 'task' ) {
+                    if ( row.get('Task') && row.get('Task')._ref == item.get('_ref') ) {
+                        hasRow = true;
+                    }
+                } else {
+                    if ( Ext.isEmpty(row.get('Task')) && row.get('WorkProduct') && row.get('WorkProduct')._ref == item.get('_ref') ) {
+                        hasRow = true;
+                    }
+                }
+            }
+        });
+        
+        return hasRow;
+    },
+    
     _loadTimeEntryItems: function() {
         this.setLoading('Loading time entry items...');
         
@@ -1377,6 +1737,221 @@ Ext.define('CA.techservices.TimeTable', {
         return TSUtilities.loadWsapiRecords(config);        
     }
 });
+Ext.define("TSTimesheet", {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+    logger: new Rally.technicalservices.Logger(),
+    defaults: { margin: 10 },
+    layout: 'border',
+    
+    items: [
+        {xtype:'container', itemId:'selector_box', region: 'north',  layout: { type:'hbox' }, minHeight: 25}
+    ],
+
+    integrationHeaders : {
+        name : "TSTimesheet"
+    },
+    
+    config: {
+        defaultSettings: {
+            /* 0=sunday, 6=saturday */
+            weekStartsOn: 0 
+        }
+    },
+    
+    launch: function() {
+        this._addSelectors(this.down('#selector_box'));
+    },
+    
+    _addSelectors: function(container) {
+        container.removeAll();
+        container.add({xtype:'container',itemId:'button_box'});
+        
+        container.add({xtype:'container',flex: 1});
+        
+        var week_starts_on = this.getSetting('weekStartsOn');
+        this.logger.log('Week Start:', week_starts_on);
+        
+        container.add({
+            xtype:'rallydatefield',
+            itemId:'date_selector',
+            fieldLabel: 'Week Starting',
+            listeners: {
+                scope: this,
+                change: function(dp, new_value) {
+                    var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value,week_starts_on);
+                    if ( week_start !== new_value ) {
+                        dp.setValue(week_start);
+                    }
+                    if ( new_value.getDay() === week_starts_on ) {
+                        this.updateData();
+                    }
+                }
+            }
+        }).setValue(new Date());
+    },
+    
+    _addButtons: function(container) {
+        container.removeAll();
+        
+        container.add({
+            xtype:'rallybutton',
+            text: 'Add My Tasks',
+            toolTipText: "(in current iteration)", 
+            padding: 2,
+            disabled: false,
+            listeners: {
+                scope: this,
+                click: this._addCurrentTasks
+            }
+        });
+        
+//        container.add({
+//            xtype:'rallybutton',
+//            text: '+<span class="icon-task"> </span>',
+//            disabled: true,
+//            toolTipText: "Search and add Tasks", 
+//            listeners: {
+//                scope: this,
+//                click: this._findAndAddTask
+//            }
+//        });
+//        
+//        container.add({
+//            xtype:'rallybutton',
+//            text: '+<span class="icon-story"> </span>',
+//            toolTipText: "Search and add User Stories",
+//            disabled: true,
+//            listeners: {
+//                scope: this,
+//                click: this._findAndAddStory
+//            }
+//        });
+        
+    },
+    
+    _addCurrentTasks: function() {
+        var timetable = this.down('tstimetable');
+        if (timetable) {
+            this.setLoading("Finding my current tasks...");
+            
+            var config = {
+                model: 'Task',
+                context: {
+                    project: null
+                },
+                fetch:  ['ObjectID','Name','FormattedID','WorkProduct','Project'],
+                filters: [
+                    {property:'Owner.ObjectID',value:this.getContext().getUser().ObjectID},
+                    {property:'Iteration.StartDate',operator: '<=', value:Rally.util.DateTime.toIsoString(this.startDate)},
+                    {property:'Iteration.EndDate',  operator: '>=', value:Rally.util.DateTime.toIsoString(this.startDate)}
+                ]
+            };
+            
+            TSUtilities.loadWsapiRecords(config).then({
+                scope: this,
+                success: function(tasks) {
+                    var new_item_count = tasks.length;
+                    var current_count  = timetable.getGrid().getStore().getTotalCount();
+                    
+                    if ( current_count + new_item_count > 100 ) {
+                        Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        this.setLoading(false);
+                    } else {
+                        Ext.Array.each(tasks, function(task){
+                            timetable.addRowForItem(task);
+                        });
+                    }
+                    
+                    this.setLoading(false);
+                    
+                },
+                failure: function(msg) {
+                    Ext.Msg.alert("Problem loading current tasks", msg);
+                }
+            });
+        }
+    },
+    
+    updateData: function() {
+        var me = this;
+        var timetable  = this.down('tstimetable');
+        if ( ! Ext.isEmpty(timetable) ) { timetable.destroy(); }
+        
+        this.startDate = this.down('#date_selector').getValue();
+        
+        var editable = true;
+        
+        this.time_table = this.add({ 
+            xtype: 'tstimetable',
+            region: 'center',
+            layout: 'fit',
+            margin: 15,
+            startDate: this.startDate,
+            editable: editable,
+            listeners: {
+                scope: this,
+                gridReady: function() {
+                    this._addButtons(this.down('#button_box'));
+                }
+            }
+        });
+    },
+
+    getSettingsFields: function() {
+        var days_of_week = [
+            {Name:'Sunday', Value:0},
+            {Name:'Monday', Value:1},
+            {Name:'Tuesday', Value:2},
+            {Name:'Wednesday', Value:3},
+            {Name:'Thursday', Value:4},
+            {Name:'Friday', Value:5},
+            {Name:'Saturday', Value:6}
+        ];
+        
+        return [{
+            name: 'weekStartsOn',
+            xtype: 'rallycombobox',
+            fieldLabel: 'Week Starts On',
+            labelWidth: 100,
+            labelAlign: 'left',
+            minWidth: 200,
+            displayField:'Name',
+            valueField: 'Value',
+            store: Ext.create('Rally.data.custom.Store',{
+                data: days_of_week
+            }),
+            readyEvent: 'ready'
+        }];
+    },
+    
+    getOptions: function() {
+        return [
+            {
+                text: 'About...',
+                handler: this._launchInfo,
+                scope: this
+            }
+        ];
+    },
+    
+    _launchInfo: function() {
+        if ( this.about_dialog ) { this.about_dialog.destroy(); }
+        this.about_dialog = Ext.create('Rally.technicalservices.InfoLink',{});
+    },
+    
+    isExternal: function(){
+        return typeof(this.getAppId()) == 'undefined';
+    },
+    
+    //onSettingsUpdate:  Override
+    onSettingsUpdate: function (settings){
+        this.logger.log('onSettingsUpdate',settings);
+        // Ext.apply(this, settings);
+        this.launch();
+    }
+});
+
             
                Rally.launchApp('TSTimesheet', {
                    name: 'TS Timesheet'
