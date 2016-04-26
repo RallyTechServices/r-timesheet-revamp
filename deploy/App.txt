@@ -3,14 +3,14 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Apr 19 2016 22:15:46 GMT-0700 (MST) -->
+    <!--  Build Date: Tue Apr 26 2016 16:35:23 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Apr 19 2016 22:15:46 GMT-0700 (MST)";
-        var CHECKSUM = 96539491960;
+        var APP_BUILD_DATE = "Tue Apr 26 2016 16:35:23 GMT-0700 (PDT)";
+        var CHECKSUM = 95805083250;
     </script>
     
-    <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
+    <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
 
     <script type="text/javascript">
         Rally.onReady(function() {
@@ -406,29 +406,18 @@ Ext.define('TSDateUtils', {
     },
     
     getBeginningOfWeekISOForLocalDate: function(week_date,showShiftedTimeStamp,weekStartDay) {
-        var offset = week_date.getTimezoneOffset();  // 480 is pacific, -330 is india
-        
         if ( Ext.isEmpty(weekStartDay) ) {
             weekStartDay = 0;
         }
         
         var local_beginning = TSDateUtils.getBeginningOfWeekForLocalDate(week_date,weekStartDay);
-        var shifted_time = Rally.util.DateTime.add(week_date,'minute',offset);
-                
-        if ( shifted_time.getUTCDay() === weekStartDay && shifted_time.getHours() === 0  ) {
-            // this is already the beginning of the week
-            var shifted_string = this.formatShiftedDate(week_date, 'Y-m-d');
-            if ( showShiftedTimeStamp ) {
-                return shifted_string + 'T00:00:00.0Z';
-            }
-            return shifted_string;
-        }
         
+        console.log('week_date', week_date, 'local_beginning', local_beginning, weekStartDay);
         if (showShiftedTimeStamp) {
             return Rally.util.DateTime.toIsoString(local_beginning).replace(/T.*$/,'T00:00:00.0Z');
         }
         
-        return Rally.util.DateTime.toIsoString(local_beginning).replace(/T.*$/,'');
+        return Rally.util.DateTime.toIsoString(local_beginning,false).replace(/T.*$/,'');
     },
     
     formatShiftedDate: function(jsdate,format) {
@@ -997,7 +986,10 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     dayShortNames: {'Sunday':'Sun','Monday':'Mon','Tuesday':'Tues','Wednesday':'Wed','Thursday':'Thur','Friday':'Fri','Saturday':'Sat'},
     
     getDayOfWeekFromDate: function(jsdate) {
-        return jsdate.getUTCDay();
+        if ( jsdate.getUTCHours() === 0 ) {
+            return jsdate.getUTCDay();
+        }
+        return jsdate.getDay();
     },
     
     getDayOfWeek: function(value, record) {
@@ -1065,9 +1057,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         
         var first_days = Ext.Array.slice(standard_days, week_start_day, 7);
         var second_days = Ext.Array.slice(standard_days, 0, week_start_day);
-        
+                
         return Ext.Array.push(first_days, second_days);
-        
     },
     
     getValueFromDayOfWeek: function(week_start_date, week_start_day, day_name) {
@@ -1234,7 +1225,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
         var time_entry_item = null;
         Ext.Array.each(this.get('TimeEntryItemRecords'), function(item){
-            console.log(value_date, item.get('WeekStartDate'));
             var delta = Rally.util.DateTime.getDifference(value_date, item.get('WeekStartDate'), 'day');
             if ( value_date >= item.get('WeekStartDate') && delta < 7 ) {
                 time_entry_item = item;
@@ -1263,10 +1253,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         
-        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date,true,0);
+//        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date);
+//        console.log("Creating TEI for week starting:", sunday_start, " (", value_date, ")");
         
         var config = {
-            WeekStartDate: sunday_start,
+            WeekStartDate: value_date,
             Project: { _ref: project._ref }
         };
         
@@ -1847,7 +1838,6 @@ Ext.define("TSTimesheet", {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    console.log(new_value);
                     if ( Ext.isEmpty(new_value) ) { return; }
                     
                     var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value,week_starts_on);
@@ -2109,6 +2099,8 @@ Ext.define("TSTimesheet", {
         
         this.startDate = this.down('#date_selector').getValue();
         
+        this.logger.log('startDate', this.startDate);
+        
         var editable = true;
         
         this.time_table = this.add({ 
@@ -2147,6 +2139,7 @@ Ext.define("TSTimesheet", {
             minWidth: 200,
             displayField:'Name',
             valueField: 'Value',
+            value: this.getSetting('weekStartsOn'),
             store: Ext.create('Rally.data.custom.Store',{
                 data: days_of_week
             }),

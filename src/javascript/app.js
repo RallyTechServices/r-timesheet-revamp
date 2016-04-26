@@ -40,7 +40,6 @@ Ext.define("TSTimesheet", {
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
-                    console.log(new_value);
                     if ( Ext.isEmpty(new_value) ) { return; }
                     
                     var week_start = TSDateUtils.getBeginningOfWeekForLocalDate(new_value,week_starts_on);
@@ -302,6 +301,8 @@ Ext.define("TSTimesheet", {
         
         this.startDate = this.down('#date_selector').getValue();
         
+        this.logger.log('startDate', this.startDate);
+        
         var editable = true;
         
         this.time_table = this.add({ 
@@ -340,6 +341,7 @@ Ext.define("TSTimesheet", {
             minWidth: 200,
             displayField:'Name',
             valueField: 'Value',
+            value: this.getSetting('weekStartsOn'),
             store: Ext.create('Rally.data.custom.Store',{
                 data: days_of_week
             }),

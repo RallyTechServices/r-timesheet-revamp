@@ -16,20 +16,12 @@ describe("When using timezone utilities for week beginning with a non-sunday day
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(friday_local,false,1)).toEqual(monday_iso);
     });
     
-    it("given a date in a local timezone that matches Monday in UTC, should provide a monday iso string without timestamp",function(){
-        
-        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_in_utc, false, 1)).toEqual(monday_iso);
-    });
-    
     it("given a date in a local timezone, should provide a Monday iso string with fake midnight timestamp",function(){
         
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_local,true,1)).toEqual(previous_monday_iso_full);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_local,true,1)).toEqual(monday_iso_full);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(friday_local,true,1)).toEqual(monday_iso_full);
     });
-    
-    it("given a date in a local timezone that matches Monday in UTC, should provide a Monday iso string with fake midnight timestamp",function(){
-        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_in_utc,true,1)).toEqual(monday_iso_full);
-    });
+
 
 });

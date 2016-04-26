@@ -9,17 +9,19 @@ describe("When using timezone utilities for beginning on Sunday", function() {
     
     it("given a date in a local timezone, should provide a sunday iso string without timestamp",function(){
         var sunday_iso = '2016-02-07';
-        
+        var sunday_local_dst_iso = '2016-03-13';
+
+        var sunday_local_2am  = new Date(2016,1,7,2,0);
+        var monday_local_4am  = new Date(2016,1,8,4,0);
+        var monday_local_4am_dst  = new Date(2016, 2, 14, 4, 0, 0);    
+
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_local)).toEqual(sunday_iso);
+        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_local_2am)).toEqual(sunday_iso);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_local)).toEqual(sunday_iso);
+        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_local_4am)).toEqual(sunday_iso);
+        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_local_4am_dst)).toEqual(sunday_local_dst_iso);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(friday_local)).toEqual(sunday_iso);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(friday_local, false)).toEqual(sunday_iso);
-    });
-    
-    it("given a date in a local timezone that matches Sunday in UTC, should provide a sunday iso string without timestamp",function(){
-        var sunday_iso = '2016-02-07';
-        
-        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_in_utc)).toEqual(sunday_iso);
     });
     
     it("given a date in a local timezone, should provide a sunday iso string with fake midnight timestamp",function(){
@@ -29,12 +31,6 @@ describe("When using timezone utilities for beginning on Sunday", function() {
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_local,true)).toEqual(sunday_iso);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_local,true)).toEqual(sunday_iso);
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(friday_local,true)).toEqual(sunday_iso);
-    });
-    
-    it("given a date in a local timezone that matches Sunday in UTC, should provide a sunday iso string with fake midnight timestamp",function(){
-        var sunday_iso = '2016-02-07T00:00:00.0Z';
-        
-        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_in_utc,true)).toEqual(sunday_iso);
     });
     
     it ( "given a date in local timezone, should provide a javascript date as if at midnight utc but same date", function() {

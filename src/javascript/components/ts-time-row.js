@@ -6,7 +6,10 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     dayShortNames: {'Sunday':'Sun','Monday':'Mon','Tuesday':'Tues','Wednesday':'Wed','Thursday':'Thur','Friday':'Fri','Saturday':'Sat'},
     
     getDayOfWeekFromDate: function(jsdate) {
-        return jsdate.getUTCDay();
+        if ( jsdate.getUTCHours() === 0 ) {
+            return jsdate.getUTCDay();
+        }
+        return jsdate.getDay();
     },
     
     getDayOfWeek: function(value, record) {
@@ -74,9 +77,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         
         var first_days = Ext.Array.slice(standard_days, week_start_day, 7);
         var second_days = Ext.Array.slice(standard_days, 0, week_start_day);
-        
+                
         return Ext.Array.push(first_days, second_days);
-        
     },
     
     getValueFromDayOfWeek: function(week_start_date, week_start_day, day_name) {
@@ -243,7 +245,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
         var time_entry_item = null;
         Ext.Array.each(this.get('TimeEntryItemRecords'), function(item){
-            console.log(value_date, item.get('WeekStartDate'));
             var delta = Rally.util.DateTime.getDifference(value_date, item.get('WeekStartDate'), 'day');
             if ( value_date >= item.get('WeekStartDate') && delta < 7 ) {
                 time_entry_item = item;
@@ -272,10 +273,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         
-        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date,true,0);
+//        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date);
+//        console.log("Creating TEI for week starting:", sunday_start, " (", value_date, ")");
         
         var config = {
-            WeekStartDate: sunday_start,
+            WeekStartDate: value_date,
             Project: { _ref: project._ref }
         };
         
