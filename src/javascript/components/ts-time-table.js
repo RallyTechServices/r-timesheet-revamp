@@ -242,6 +242,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             getEditor: editor_config, 
+            field: 'test',
             summaryType: 'sum',
             renderer: function(value,meta,record) {
                 if ( value === 0 ) {

@@ -124,8 +124,9 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'TimeEntryValueRecords', type:'object', defaultValue: []},
         
         //
-        { name: 'Sunday', type:'number', persist: true, convert: 
-            function(value,record) {
+        { name: 'Sunday', type:'number', persist: true, 
+            
+            convert: function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Sunday');
             }
         },
