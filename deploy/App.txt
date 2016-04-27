@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Apr 26 2016 16:35:23 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Apr 26 2016 17:00:23 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Apr 26 2016 16:35:23 GMT-0700 (PDT)";
-        var CHECKSUM = 95805083250;
+        var APP_BUILD_DATE = "Tue Apr 26 2016 17:00:23 GMT-0700 (PDT)";
+        var CHECKSUM = 96423404261;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1531,8 +1531,8 @@ Ext.define('CA.techservices.TimeTable', {
             }
         ]);
         
-        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day) {
-            columns.push(this._getColumnForDay(day));
+        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day,idx) {
+            columns.push(this._getColumnForDay(day,idx));
         },this);
         
         var total_renderer = function(value, meta, record) {
@@ -1560,7 +1560,7 @@ Ext.define('CA.techservices.TimeTable', {
         return columns;
     },
     
-    _getColumnForDay: function(day) {
+    _getColumnForDay: function(day,idx) {
         var disabled = false;
         
         var editor_config = function(record,df) {
@@ -1587,9 +1587,14 @@ Ext.define('CA.techservices.TimeTable', {
             });
         };
 
+        var header_text = Ext.String.format("{0}<br/>{1}",
+            CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
+            moment( Rally.util.DateTime.add(this.startDate,'day',idx) ).utc().format('D MMM')
+        );
+        
         var config = {
             dataIndex:day,
-            text: CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
+            html: header_text,
             width: 50, 
             resizable: false,
             align: 'center',

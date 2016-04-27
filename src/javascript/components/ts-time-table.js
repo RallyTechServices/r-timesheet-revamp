@@ -174,8 +174,8 @@ Ext.define('CA.techservices.TimeTable', {
             }
         ]);
         
-        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day) {
-            columns.push(this._getColumnForDay(day));
+        Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day,idx) {
+            columns.push(this._getColumnForDay(day,idx));
         },this);
         
         var total_renderer = function(value, meta, record) {
@@ -203,7 +203,7 @@ Ext.define('CA.techservices.TimeTable', {
         return columns;
     },
     
-    _getColumnForDay: function(day) {
+    _getColumnForDay: function(day,idx) {
         var disabled = false;
         
         var editor_config = function(record,df) {
@@ -230,9 +230,14 @@ Ext.define('CA.techservices.TimeTable', {
             });
         };
 
+        var header_text = Ext.String.format("{0}<br/>{1}",
+            CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
+            moment( Rally.util.DateTime.add(this.startDate,'day',idx) ).utc().format('D MMM')
+        );
+        
         var config = {
             dataIndex:day,
-            text: CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
+            html: header_text,
             width: 50, 
             resizable: false,
             align: 'center',
