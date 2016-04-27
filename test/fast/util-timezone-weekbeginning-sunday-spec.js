@@ -24,6 +24,14 @@ describe("When using timezone utilities for beginning on Sunday", function() {
         expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(friday_local, false)).toEqual(sunday_iso);
     });
     
+    it("given a date that matches midnight in UTC, should provide a sunday iso string without timestamp",function(){
+        var sunday_iso = '2016-02-07';
+        var sunday_local_dst_iso = '2016-03-13';
+
+        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(sunday_in_utc)).toEqual(sunday_iso);
+        expect(TSDateUtils.getBeginningOfWeekISOForLocalDate(monday_in_utc)).toEqual(sunday_iso);
+    });
+    
     it("given a date in a local timezone, should provide a sunday iso string with fake midnight timestamp",function(){
         // Feb 7, 2016 is a sunday
         var sunday_iso = '2016-02-07T00:00:00.0Z';

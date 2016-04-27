@@ -5,6 +5,10 @@ Ext.define('TSDateUtils', {
         if ( Ext.isEmpty(weekStartDay) ) { weekStartDay = 0; }
         
         var dayInWeek = week_date.getDay();
+        if ( week_date.getUTCHours() === 0 ) {
+            // already in UTC
+            dayInWeek = week_date.getUTCDay();
+        }
         var delta = weekStartDay - dayInWeek;
         if ( dayInWeek < weekStartDay ) {
             delta = weekStartDay - dayInWeek - 7;
@@ -25,7 +29,10 @@ Ext.define('TSDateUtils', {
         if (showShiftedTimeStamp) {
             return Rally.util.DateTime.toIsoString(local_beginning).replace(/T.*$/,'T00:00:00.0Z');
         }
-        
+
+        if ( local_beginning.getUTCHours() === 0 ) {
+            return Rally.util.DateTime.toIsoString(local_beginning,true).replace(/T.*$/,'');
+        }
         return Rally.util.DateTime.toIsoString(local_beginning,false).replace(/T.*$/,'');
     },
     

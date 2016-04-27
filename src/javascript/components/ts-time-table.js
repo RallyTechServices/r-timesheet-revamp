@@ -326,11 +326,15 @@ Ext.define('CA.techservices.TimeTable', {
         console.log('Adding row for ', item);
         
         var item_type = item.get('_type');
+        
+        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate);
+        console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
+        
         var config = {
             WorkProduct: {
                 _ref: item.get('_ref')
             },
-            WeekStartDate: TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate,true,0),
+            WeekStartDate: sunday_start,
             User: {
                 _ref: '/usr/' + this.timesheetUser.ObjectID
             }

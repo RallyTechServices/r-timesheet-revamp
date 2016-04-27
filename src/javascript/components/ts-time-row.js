@@ -273,11 +273,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         
-//        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date);
-//        console.log("Creating TEI for week starting:", sunday_start, " (", value_date, ")");
+        var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(value_date);
+        console.log("Creating TEI for week starting:", sunday_start, " (", value_date, ")");
         
         var config = {
-            WeekStartDate: value_date,
+            WeekStartDate: sunday_start,
             Project: { _ref: project._ref }
         };
         
