@@ -360,7 +360,8 @@ Ext.define('CA.techservices.TimeTable', {
                         console.log('--', operation);
                         row = Ext.create('CA.techservices.timesheet.TimeRow',{
                             WeekStartDate: me.startDate,
-                            TimeEntryItemRecords: [result]
+                            TimeEntryItemRecords: [result],
+                            TimeEntryValueRecords: []
                         });
                         
                         me.grid.getStore().loadRecords([row], { addRecords: true });

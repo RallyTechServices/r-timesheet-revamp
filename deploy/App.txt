@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Apr 26 2016 17:31:11 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Apr 27 2016 02:35:18 GMT+0200 (CEST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Apr 26 2016 17:31:11 GMT-0700 (PDT)";
-        var CHECKSUM = 97725600976;
+        var APP_BUILD_DATE = "Wed Apr 27 2016 02:35:18 GMT+0200 (CEST)";
+        var CHECKSUM = 97844024615;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1724,7 +1724,8 @@ Ext.define('CA.techservices.TimeTable', {
                         console.log('--', operation);
                         row = Ext.create('CA.techservices.timesheet.TimeRow',{
                             WeekStartDate: me.startDate,
-                            TimeEntryItemRecords: [result]
+                            TimeEntryItemRecords: [result],
+                            TimeEntryValueRecords: []
                         });
                         
                         me.grid.getStore().loadRecords([row], { addRecords: true });
