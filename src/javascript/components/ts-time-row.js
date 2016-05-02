@@ -226,9 +226,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             changes = this.getChanges();
         
         var promises = [];
-        Ext.Object.each(changes, function(field, value) {
-            console.log('--', field, value);
-            
+        Ext.Object.each(changes, function(field, value) {            
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
                 promises.push( function() { return me._changeDayValue(field,value); });
             } 
@@ -259,9 +257,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         var task = this.get("Task");
-        
-        console.log(field, value);
-        
+                
         if ( Ext.isEmpty(task) ) {
             return;
         }
