@@ -14,7 +14,8 @@ Ext.define('CA.techservices.TimeTable', {
     cls: 'tstimetable',
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
-        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID'],
+        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
+        'Iteration','ToDo','State'],
         
     config: {
         startDate: null,
@@ -157,6 +158,17 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             },
             {
+                dataIndex: 'Iteration',
+                text: 'Iteration',
+                editor: null,
+                renderer: function(value,meta,record){
+                    if ( Ext.isEmpty(value) ){
+                        return "--";
+                    }
+                    return value._refObjectName;
+                }
+            },
+            {
                 dataIndex: 'Task',
                 text: 'Task',
                 flex: 1,
@@ -173,6 +185,74 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             }
         ]);
+        
+        var state_config = {
+            dataIndex: 'State',
+            text: 'State',
+            resizable: false,
+            align: 'center',
+            field: 'test',
+            getEditor: function(record,df) {
+                if ( Ext.isEmpty(record.get('Task') ) ) {
+                    return false;
+                }
+                var minValue = 0;
+                return Ext.create('Ext.grid.CellEditor', {
+                    field: Ext.create('Rally.ui.combobox.FieldValueComboBox', {
+                        xtype:'rallyfieldvaluecombobox',
+                        model: 'Task',
+                        field: 'State',
+                        listeners: {
+                            change: function(field, new_value, old_value) {
+                                if ( Ext.isEmpty(new_value) ) {
+                                   return;
+                                }
+                                
+                                console.log('saving state', new_value);
+                                record.set('State', new_value);
+                                record.save();
+                            }
+                        }
+                    })
+                });
+            }
+        };
+        
+        columns.push(state_config);
+
+        var todo_config = {
+            dataIndex: 'ToDo',
+            text: 'To Do',
+            width: 50, 
+            resizable: false,
+            align: 'center',
+            field: 'test',
+            getEditor: function(record,df) {
+                if ( Ext.isEmpty(record.get('Task') ) ) {
+                    return false;
+                }
+                var minValue = 0;
+                return Ext.create('Ext.grid.CellEditor', {
+                    field: Ext.create('Rally.ui.NumberField', {
+                        xtype:'rallynumberfield',
+                        minValue: minValue,
+                        selectOnFocus: true,
+                        listeners: {
+                            change: function(field, new_value, old_value) {
+                                if ( Ext.isEmpty(new_value) ) {
+                                    field.setValue(0);
+                                }
+                                
+                                record.set('ToDo', new_value);
+                                record.save();
+                            }
+                        }
+                    })
+                });
+            }
+        };
+        
+        columns.push(todo_config);
         
         Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day,idx) {
             columns.push(this._getColumnForDay(day,idx));

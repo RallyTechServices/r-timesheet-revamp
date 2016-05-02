@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Apr 27 2016 04:07:34 GMT+0200 (CEST) -->
+    <!--  Build Date: Sun May 01 2016 18:33:14 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Apr 27 2016 04:07:34 GMT+0200 (CEST)";
-        var CHECKSUM = 97896842468;
+        var APP_BUILD_DATE = "Sun May 01 2016 18:33:14 GMT-0700 (PDT)";
+        var CHECKSUM = 112764534395;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1019,6 +1019,25 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
             return value;
         }
         
+        if (/\./.test(field_name)) {
+            var field_array = field_name.split('.');
+            var field = field_array.shift();
+            if ( field_array.length == 1 ) {
+                if ( Ext.isEmpty(teis[0].get(field)) ) {
+                    return null;
+                }
+                return teis[0].get(field)[field_array[0]];
+            }
+            if ( field_array.length == 2 ) {
+                if ( Ext.isEmpty(teis[0].get(field)) || Ext.isEmpty(teis[0].get(field)[field_array[0]]) ) {
+                    return null;
+                }
+                return teis[0].get(field)[field_array[0]][field_array[1]];
+            }
+            
+            console.log("Field Array Too Long", field_array);
+            
+        }
         return teis[0].get(field_name);
     },
     
@@ -1103,6 +1122,25 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
             }
         },
+        
+        { name: 'Iteration', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Iteration')
+                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Iteration');
+            }
+        },
+        
+        { name: 'ToDo', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo');
+            }
+        },
+        
+        { name: 'State', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State');
+            }
+        },
         // WeekStart: Day of Week (0=Sunday, 6=Saturday)
         { name: 'WeekStart', type: 'int', convert:  CA.techservices.timesheet.TimeRowUtils.getDayOfWeek },
         
@@ -1176,12 +1214,69 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         
         var promises = [];
         Ext.Object.each(changes, function(field, value) {
+            console.log('--', field, value);
+            
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
                 promises.push( function() { return me._changeDayValue(field,value); });
+            } 
+            
+            if ( field == "ToDo" ) {
+                promises.push(function() { return me._changeToDoValue(value); });
+            }
+            
+            if ( field == "State" ) {
+                promises.push(function() { return me._changeStateValue(value); });
             }
         });
         
         return Deft.Chain.sequence(promises,this);
+    },
+    
+    _changeToDoValue: function(value) {
+        return this._changeTaskFieldValue('ToDo',value);
+    },
+    
+    _changeStateValue: function(value) {
+        if ( value == "Completed" ) { this.set('ToDo', 0); }
+        
+        return this._changeTaskFieldValue('State',value);
+    },
+    
+    _changeTaskFieldValue: function(field, value) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        var task = this.get("Task");
+        
+        console.log(field, value);
+        
+        if ( Ext.isEmpty(task) ) {
+            return;
+        }
+        
+        Rally.data.ModelFactory.getModel({
+            type: 'Task',
+            scope: this,
+            success: function(model) {
+                model.load(task.ObjectID,{
+                    fetch: ['Name', 'State', 'Iteration','ToDo','WorkProduct'],
+                    callback: function(result, operation) {
+                        if(operation.wasSuccessful()) {
+                            result.set(field,value);
+                            result.save({
+                                callback: function(new_task, operation) {
+                                    me.set('Task', new_task.getData());
+                                    deferred.resolve(new_task);
+                                }
+                            });
+                            
+                        } else {
+                            deferred.reject('Problem saving Task');
+                        }
+                    }
+                });
+            }
+        });
+        return deferred;
     },
     
     _changeDayValue: function(day, value) {
@@ -1379,7 +1474,8 @@ Ext.define('CA.techservices.TimeTable', {
     cls: 'tstimetable',
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
-        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID'],
+        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
+        'Iteration','ToDo','State'],
         
     config: {
         startDate: null,
@@ -1522,6 +1618,17 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             },
             {
+                dataIndex: 'Iteration',
+                text: 'Iteration',
+                editor: null,
+                renderer: function(value,meta,record){
+                    if ( Ext.isEmpty(value) ){
+                        return "--";
+                    }
+                    return value._refObjectName;
+                }
+            },
+            {
                 dataIndex: 'Task',
                 text: 'Task',
                 flex: 1,
@@ -1538,6 +1645,74 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             }
         ]);
+        
+        var state_config = {
+            dataIndex: 'State',
+            text: 'State',
+            resizable: false,
+            align: 'center',
+            field: 'test',
+            getEditor: function(record,df) {
+                if ( Ext.isEmpty(record.get('Task') ) ) {
+                    return false;
+                }
+                var minValue = 0;
+                return Ext.create('Ext.grid.CellEditor', {
+                    field: Ext.create('Rally.ui.combobox.FieldValueComboBox', {
+                        xtype:'rallyfieldvaluecombobox',
+                        model: 'Task',
+                        field: 'State',
+                        listeners: {
+                            change: function(field, new_value, old_value) {
+                                if ( Ext.isEmpty(new_value) ) {
+                                   return;
+                                }
+                                
+                                console.log('saving state', new_value);
+                                record.set('State', new_value);
+                                record.save();
+                            }
+                        }
+                    })
+                });
+            }
+        };
+        
+        columns.push(state_config);
+
+        var todo_config = {
+            dataIndex: 'ToDo',
+            text: 'To Do',
+            width: 50, 
+            resizable: false,
+            align: 'center',
+            field: 'test',
+            getEditor: function(record,df) {
+                if ( Ext.isEmpty(record.get('Task') ) ) {
+                    return false;
+                }
+                var minValue = 0;
+                return Ext.create('Ext.grid.CellEditor', {
+                    field: Ext.create('Rally.ui.NumberField', {
+                        xtype:'rallynumberfield',
+                        minValue: minValue,
+                        selectOnFocus: true,
+                        listeners: {
+                            change: function(field, new_value, old_value) {
+                                if ( Ext.isEmpty(new_value) ) {
+                                    field.setValue(0);
+                                }
+                                
+                                record.set('ToDo', new_value);
+                                record.save();
+                            }
+                        }
+                    })
+                });
+            }
+        };
+        
+        columns.push(todo_config);
         
         Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day,idx) {
             columns.push(this._getColumnForDay(day,idx));

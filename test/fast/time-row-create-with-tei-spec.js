@@ -54,4 +54,88 @@ describe("Time Row Creation By Time Entry Items Tests", function() {
         expect(row.get('Task').ObjectID).toEqual(3);
     });
     
+        
+    it('should set ToDo and State if created with a time entry item that is a task', function(){
+        var tei = Ext.create('mockTimeEntryItem',{
+            WeekStartDate: sunday_in_utc,
+            Project:     { Name: 'Test Project', ObjectID: 1 },
+            WorkProduct: { Name: 'My Story', FormattedID: 'US1', ObjectID: 2 },
+            Task:        { Name: 'My Task', FormattedID:'TA1', ObjectID: 3, ToDo: 18, State: 'Defined' }
+        });
+        
+        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
+            WeekStartDate: monday_in_utc,
+            TimeEntryItemRecords: [ tei ]
+        });
+        
+        expect(row.get('Task').ObjectID).toEqual(3);
+        expect(row.get('ToDo')).toEqual(18);
+        expect(row.get('State')).toEqual('Defined');
+    });
+    
+            
+    it('should set Iteration if created with a work product time entry item that has an iteration', function(){
+        var iteration = {
+            _refObjectName: 'Iteration 1',
+            ObjectID: 4 
+        };
+        
+        var tei = Ext.create('mockTimeEntryItem',{
+            WeekStartDate: sunday_in_utc,
+            Project:     { Name: 'Test Project', ObjectID: 1 },
+            WorkProduct: { Name: 'My Story', FormattedID: 'US1', ObjectID: 2, Iteration: iteration },
+            Task:        { Name: 'My Task', FormattedID:'TA1', ObjectID: 3, ToDo: 18, Iteration: iteration }
+        });
+        
+        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
+            WeekStartDate: monday_in_utc,
+            TimeEntryItemRecords: [ tei ]
+        });
+        
+        expect(row.get('Task').ObjectID).toEqual(3);
+        expect(row.get('Iteration')._refObjectName).toEqual('Iteration 1');
+    });
+    
+    it('should set Iteration if created with a task-less work product time entry item that has an iteration', function(){
+        var iteration = {
+            _refObjectName: 'Iteration 1',
+            ObjectID: 4 
+        };
+        
+        var tei = Ext.create('mockTimeEntryItem',{
+            WeekStartDate: sunday_in_utc,
+            Project:     { Name: 'Test Project', ObjectID: 1 },
+            WorkProduct: { Name: 'My Story', FormattedID: 'US1', ObjectID: 2, Iteration: iteration }
+        });
+        
+        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
+            WeekStartDate: monday_in_utc,
+            TimeEntryItemRecords: [ tei ]
+        });
+        
+        expect(row.get('Iteration')._refObjectName).toEqual('Iteration 1');
+    });
+    
+    it('should set Iteration if created with a task time entry item that has an iteration', function(){
+        var iteration = {
+            _refObjectName: 'Iteration 1',
+            ObjectID: 4 
+        };
+        
+        var tei = Ext.create('mockTimeEntryItem',{
+            WeekStartDate: sunday_in_utc,
+            Project:     { Name: 'Test Project', ObjectID: 1 },
+            WorkProduct: { Name: 'My Story', FormattedID: 'US1', ObjectID: 2 }, // no real reason why workproduct would be missing it but still we'll test
+            Task:        { Name: 'My Task', FormattedID:'TA1', ObjectID: 3, ToDo: 18, Iteration: iteration }
+        });
+        
+        var row = Ext.create('CA.techservices.timesheet.TimeRow',{ 
+            WeekStartDate: monday_in_utc,
+            TimeEntryItemRecords: [ tei ]
+        });
+        
+        expect(row.get('Task').ObjectID).toEqual(3);
+        expect(row.get('Iteration')._refObjectName).toEqual('Iteration 1');
+    });
+    
 });

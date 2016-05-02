@@ -32,6 +32,25 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
             return value;
         }
         
+        if (/\./.test(field_name)) {
+            var field_array = field_name.split('.');
+            var field = field_array.shift();
+            if ( field_array.length == 1 ) {
+                if ( Ext.isEmpty(teis[0].get(field)) ) {
+                    return null;
+                }
+                return teis[0].get(field)[field_array[0]];
+            }
+            if ( field_array.length == 2 ) {
+                if ( Ext.isEmpty(teis[0].get(field)) || Ext.isEmpty(teis[0].get(field)[field_array[0]]) ) {
+                    return null;
+                }
+                return teis[0].get(field)[field_array[0]][field_array[1]];
+            }
+            
+            console.log("Field Array Too Long", field_array);
+            
+        }
         return teis[0].get(field_name);
     },
     
@@ -116,6 +135,25 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
             }
         },
+        
+        { name: 'Iteration', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Iteration')
+                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Iteration');
+            }
+        },
+        
+        { name: 'ToDo', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo');
+            }
+        },
+        
+        { name: 'State', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State');
+            }
+        },
         // WeekStart: Day of Week (0=Sunday, 6=Saturday)
         { name: 'WeekStart', type: 'int', convert:  CA.techservices.timesheet.TimeRowUtils.getDayOfWeek },
         
@@ -189,12 +227,69 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         
         var promises = [];
         Ext.Object.each(changes, function(field, value) {
+            console.log('--', field, value);
+            
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
                 promises.push( function() { return me._changeDayValue(field,value); });
+            } 
+            
+            if ( field == "ToDo" ) {
+                promises.push(function() { return me._changeToDoValue(value); });
+            }
+            
+            if ( field == "State" ) {
+                promises.push(function() { return me._changeStateValue(value); });
             }
         });
         
         return Deft.Chain.sequence(promises,this);
+    },
+    
+    _changeToDoValue: function(value) {
+        return this._changeTaskFieldValue('ToDo',value);
+    },
+    
+    _changeStateValue: function(value) {
+        if ( value == "Completed" ) { this.set('ToDo', 0); }
+        
+        return this._changeTaskFieldValue('State',value);
+    },
+    
+    _changeTaskFieldValue: function(field, value) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        var task = this.get("Task");
+        
+        console.log(field, value);
+        
+        if ( Ext.isEmpty(task) ) {
+            return;
+        }
+        
+        Rally.data.ModelFactory.getModel({
+            type: 'Task',
+            scope: this,
+            success: function(model) {
+                model.load(task.ObjectID,{
+                    fetch: ['Name', 'State', 'Iteration','ToDo','WorkProduct'],
+                    callback: function(result, operation) {
+                        if(operation.wasSuccessful()) {
+                            result.set(field,value);
+                            result.save({
+                                callback: function(new_task, operation) {
+                                    me.set('Task', new_task.getData());
+                                    deferred.resolve(new_task);
+                                }
+                            });
+                            
+                        } else {
+                            deferred.reject('Problem saving Task');
+                        }
+                    }
+                });
+            }
+        });
+        return deferred;
     },
     
     _changeDayValue: function(day, value) {
