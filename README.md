@@ -2,6 +2,8 @@
 
 ## Development Notes
 
+* Shouldn't be able to remove a line if it doesn't start on monday and there is data from the week before (because we're faking a line when starting on a day other than Sunday to handle having two underlying Time Entry Items).
+
 ### First Load
 
 If you've just downloaded this from github and you want to do development, 
