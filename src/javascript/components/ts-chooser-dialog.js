@@ -130,6 +130,8 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
             types: this.artifactTypes,
             success: function(models) {
 
+                this.models = models;
+                
                 if (this.artifactTypes.length > 1) {
                     this._setupComboBox(models);
                 }
@@ -233,6 +235,66 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
                 }
             ]
         });
+        
+        filterTypeComboBox.on('change',this._changeSearchField, this);
+    },
+    
+    _changeSearchField: function(field_combobox) {
+        var field_name = field_combobox.getValue();
+        
+        var search_config = {
+            itemId: 'searchTerms',
+            emptyText: 'enter search terms',
+            flex: 1
+        };
+                
+        var field = this.models[this.artifactTypes[0]].getField(field_name)
+
+        var editor_config = {
+            xtype: 'textfield',
+            enableKeyEvents: true,
+            listeners: {
+                keyup: function(textField, event) {
+                    if (event.getKey() === Ext.EventObject.ENTER) {
+                        this._search();
+                    }
+                },
+                scope: this
+            }
+        };
+        
+        if ( field && field.editor && field.editor.field ) {
+            editor_config = field.editor.field;
+            
+            // for timeboxes to load:
+            delete editor_config.storeConfig; 
+            editor_config.defaultToCurrentTimebox = true;
+            editor_config.autoSelectCurrentItem = true;
+            
+            if ( editor_config.xtype == "rallytextfield" ) {
+                editor_config.enableKeyEvents = true;
+                editor_config.listeners = {
+                    keyup: function(textField, event) {
+                        if (event.getKey() === Ext.EventObject.ENTER) {
+                            this._search();
+                        }
+                    },
+                    scope: this
+                };
+            } else {
+                editor_config.listeners = {
+                    scope:  this,
+                    change: this._search,
+                    select: this._search
+                };
+            }
+        }
+        
+        var config = Ext.Object.merge(search_config,editor_config);
+        
+        var index = this.down('#searchBar').items.length - 2;
+        this.down('#searchTerms') && this.down('#searchTerms').destroy();
+        this.down('#searchBar').insert(index,config);
     },
     
     /**
@@ -354,8 +416,7 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
     /**
      * @private
      */
-    _search: function() {
-        
+    _search: function() {        
         var terms = this.down('#searchTerms').getValue();
         var filterBy = this.down('#filterTypeComboBox').getValue();
         var filter;
@@ -379,6 +440,10 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
             });
         }
 
+        if ( Ext.isFunction( this.down('#searchTerms').getQueryFromSelected ) ){
+            filter = this.down('#searchTerms').getQueryFromSelected();
+        }
+        
         this.grid.filter(filter, true);
     },
 

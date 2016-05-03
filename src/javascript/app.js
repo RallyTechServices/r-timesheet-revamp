@@ -162,11 +162,11 @@ Ext.define("TSTimesheet", {
                     },
                     {
                         displayName:'Release',
-                        attributeName: 'Release.Name'
+                        attributeName: 'Release'
                     },
                     {
                         displayName:'Iteration',
-                        attributeName: 'Iteration.Name'
+                        attributeName: 'Iteration'
                     },
                     {
                         displayName:'Project',
@@ -245,8 +245,12 @@ Ext.define("TSTimesheet", {
                         attributeName: 'Feature.Project.Name'
                     },
                     {
+                        displayName:'Iteration',
+                        attributeName: 'Iteration'
+                    },
+                    {
                         displayName:'Release',
-                        attributeName: 'Release.Name'
+                        attributeName: 'Release'
                     },
                     {
                         displayName:'Project',
