@@ -20,7 +20,8 @@ Ext.define('CA.techservices.TimeTable', {
     config: {
         startDate: null,
         editable: true,
-        timesheetUser: null
+        timesheetUser: null,
+        pinKey: 'CA.techservices.timesheet.pin'
     },
     
     constructor: function (config) {
@@ -67,13 +68,16 @@ Ext.define('CA.techservices.TimeTable', {
         
         Deft.Chain.sequence([
             this._loadTimeEntryItems,
-            this._loadTimeEntryValues
+            this._loadTimeEntryValues,
+            this._loadDefaultSettings
         ],this).then({
             scope: this,
             success: function(results) {
                 var time_entry_items  = results[0];
                 var time_entry_values = results[1];
+                this.time_entry_defaults = results[2];
                 
+                console.log('defaults', this.time_entry_defaults);
                 this.rows = this._createRows(time_entry_items, time_entry_values);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
@@ -82,6 +86,28 @@ Ext.define('CA.techservices.TimeTable', {
                 Ext.Msg.alert('Problem Loading', msg);
             }
         });
+    },
+    
+    _loadDefaultSettings: function() {
+        var deferred = Ext.create('Deft.Deferred');
+        
+        Rally.data.PreferenceManager.load({
+            filterByUser: true,
+            additionalFilters: [{property:'Name', operator:'contains', value: this.pinKey}],
+            
+            success: function(prefs) {
+                //process prefs
+                //console.log('prefs', prefs);
+                var defaults = {};
+                Ext.Object.each(prefs, function(key,pref){
+                    var value = Ext.JSON.decode(pref);
+                    Ext.apply(defaults, value);
+                });
+                
+                deferred.resolve(defaults);
+            }
+        });
+        return deferred.promise;
     },
     
     _makeGrid: function(rows) {
@@ -132,6 +158,28 @@ Ext.define('CA.techservices.TimeTable', {
                 xtype:'rallyrowactioncolumn',
                 rowActionsFn: function (record) {
                     return [
+                        {
+                            xtype: 'rallyrecordmenuitem',
+                            text: 'Set as Default',
+                            predicate: function() {
+                                return !this.record.isPinned();
+                            },
+                            handler: function(menu,evt) {
+                                me._pinRecord(menu.record);
+                            },
+                            record: record
+                        },
+                        {
+                            xtype: 'rallyrecordmenuitem',
+                            text: 'Unset Default',
+                            predicate: function() {
+                                return this.record.isPinned();
+                            },
+                            handler: function(menu,evt) {
+                                me._unpinRecord(menu.record);
+                            },
+                            record: record
+                        },
                         {
                             xtype: 'rallyrecordmenuitem',
                             text: 'Clear',
@@ -297,6 +345,62 @@ Ext.define('CA.techservices.TimeTable', {
         return columns;
     },
     
+    _getItemOIDFromRow: function(record) {
+        var record_item = record.get('Task') || record.get('WorkProduct');
+        var oid = record_item.ObjectID;
+        return oid;
+    },
+    
+    _unpinRecord: function(record) {
+        record.set('Pinned',false);
+        var oid = this._getItemOIDFromRow(record);
+        var key = Ext.String.format("{0}.{1}",
+            this.pinKey,
+            oid
+        );
+        
+        var settings = {};
+        var value = {};
+        value[oid] = false;
+        
+        settings[key] = Ext.JSON.encode( value );
+
+        Rally.data.PreferenceManager.update({
+            user: Rally.getApp().getContext().getUser().ObjectID,
+            filterByUser: true,
+            settings: settings,
+            success: function(updatedRecords, notUpdatedRecords) {
+                //yay!
+            }
+        });
+        
+    },
+    
+    _pinRecord: function(record) {
+        record.set('Pinned',true);
+        var record_item = record.get('Task') || record.get('WorkProduct');
+        var oid = this._getItemOIDFromRow(record);
+        var key = Ext.String.format("{0}.{1}",
+            this.pinKey,
+            oid
+        );
+        
+        var settings = {};
+        var value = {};
+        value[oid] = record_item._type;
+        
+        settings[key] = Ext.JSON.encode( value );
+
+        Rally.data.PreferenceManager.update({
+            user: Rally.getApp().getContext().getUser().ObjectID,
+            filterByUser: true,
+            settings: settings,
+            success: function(updatedRecords, notUpdatedRecords) {
+                //yay!
+            }
+        });
+    },
+    
     _getColumnForDay: function(day,idx) {
         var disabled = false;
         
@@ -387,7 +491,7 @@ Ext.define('CA.techservices.TimeTable', {
         // time entry items for every row if the week starts on a different day
         var time_entry_item_sets = this._getTimeEntryItemSets(time_entry_items);
         
-        Ext.Array.map(time_entry_item_sets, function(item_set){
+        Ext.Array.each(time_entry_item_sets, function(item_set){
             var item_values = [];
             
             Ext.Array.each(item_set, function(time_entry_item) {
@@ -399,11 +503,17 @@ Ext.define('CA.techservices.TimeTable', {
                 item_values = Ext.Array.push(item_values, values_for_time_entry_item);
             });
             
-            rows.push(Ext.create('CA.techservices.timesheet.TimeRow',{
+            var row = Ext.create('CA.techservices.timesheet.TimeRow',{
                 WeekStartDate: me.startDate,
                 TimeEntryItemRecords: item_set,
                 TimeEntryValueRecords: item_values
-            }));
+            });
+            
+            var item_oid = me._getItemOIDFromRow(row);
+            if ( me.time_entry_defaults[item_oid] && me.time_entry_defaults[item_oid] !== false ) {
+                row.set('Pinned',true);
+            }
+            rows.push(row);
         });
         
         return rows;

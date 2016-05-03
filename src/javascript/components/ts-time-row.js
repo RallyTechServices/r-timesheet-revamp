@@ -113,6 +113,8 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
 
     fields: [
         { name: '__SecretKey', type:'string' },
+        { name: 'Pinned', type: 'boolean', defaultValue: false },
+        
         { name: 'Project',type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Project');
@@ -529,5 +531,9 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         });
         
         return model;
+    },
+    
+    isPinned: function() {
+        return this.get('Pinned') || false;
     }
 });
