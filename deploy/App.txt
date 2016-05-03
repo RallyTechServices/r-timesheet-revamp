@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 03 2016 08:53:31 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 03 2016 08:57:26 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 03 2016 08:53:31 GMT-0700 (PDT)";
-        var CHECKSUM = 112837043911;
+        var APP_BUILD_DATE = "Tue May 03 2016 08:57:26 GMT-0700 (PDT)";
+        var CHECKSUM = 112878764551;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2176,6 +2176,7 @@ Ext.define("TSTimesheet", {
                     },
                     'Name',
                     'WorkProduct',
+                    'Iteration',
                     'Release',
                     'Project',
                     'Owner',
@@ -2254,7 +2255,7 @@ Ext.define("TSTimesheet", {
                         dataIndex: 'FormattedID'
                     },
                     'Name',
-                    'WorkProduct',
+                    'Iteration',
                     'Release',
                     'Project',
                     'Owner',

@@ -188,6 +188,7 @@ Ext.define("TSTimesheet", {
                     },
                     'Name',
                     'WorkProduct',
+                    'Iteration',
                     'Release',
                     'Project',
                     'Owner',
@@ -266,7 +267,7 @@ Ext.define("TSTimesheet", {
                         dataIndex: 'FormattedID'
                     },
                     'Name',
-                    'WorkProduct',
+                    'Iteration',
                     'Release',
                     'Project',
                     'Owner',
