@@ -185,7 +185,10 @@ Ext.define('CA.techservices.TimeTable', {
                             text: 'Clear',
                             record: record,
                             handler: function(menu,evt) {
-                                menu.record.clearAndRemove();
+                                var row = menu.record;
+                                Ext.Array.remove(me.rows, row);
+                                row.clearAndRemove();
+                                
                             }
                         }
                     ];
@@ -568,6 +571,10 @@ Ext.define('CA.techservices.TimeTable', {
                             TimeEntryValueRecords: []
                         });
                         
+                        var item_oid = me._getItemOIDFromRow(row);
+                        if ( me.time_entry_defaults[item_oid] && me.time_entry_defaults[item_oid] !== false ) {
+                            row.set('Pinned',true);
+                        }
                         me.grid.getStore().loadRecords([row], { addRecords: true });
                         me.rows.push(row);
                     }
@@ -586,8 +593,6 @@ Ext.define('CA.techservices.TimeTable', {
             hasRow = false,
             item_type = item.get('_type');
             
-        var store_count = this.grid.getStore().data.items.length;
-        
         Ext.Array.each(rows, function(row) {
             if ( row ) {
                 if ( item_type == 'task' ) {

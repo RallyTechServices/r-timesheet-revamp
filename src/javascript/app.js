@@ -60,12 +60,12 @@ Ext.define("TSTimesheet", {
         container.add({
             xtype:'rallybutton',
             text: 'Add My Tasks',
-            toolTipText: "(in current iteration)", 
+            toolTipText: "(in current iteration + defaults)", 
             padding: 2,
             disabled: false,
             listeners: {
                 scope: this,
-                click: this._addCurrentTasks
+                click: this._addCurrentTasksAndDefaults
             }
         });
         
@@ -93,47 +93,117 @@ Ext.define("TSTimesheet", {
         
     },
     
-    _addCurrentTasks: function() {
-        var timetable = this.down('tstimetable');
-        if (timetable) {
-            this.setLoading("Finding my current tasks...");
+    _addCurrentTasksAndDefaults: function() {
+        Deft.Chain.sequence([
+            this._addCurrentTasks,
+            this._addDefaults
+        ],this);
+    },
+    
+    _addDefaults: function() {
+        var timetable = this.down('tstimetable'),
+            me = this;
+        if ( !timetable ) { return; }
+        
+        var defaults = timetable.time_entry_defaults;
+        
+        var promises = [];
+        this.setLoading('Finding my defaults...');
+        
+        Ext.Object.each(defaults, function(oid,type){
+            if ( type == false ) {
+                return;
+            }
             
-            var config = {
-                model: 'Task',
-                context: {
-                    project: null
-                },
-                fetch:  ['ObjectID','Name','FormattedID','WorkProduct','Project'],
-                filters: [
-                    {property:'Owner.ObjectID',value:this.getContext().getUser().ObjectID},
-                    {property:'Iteration.StartDate',operator: '<=', value:Rally.util.DateTime.toIsoString(this.startDate)},
-                    {property:'Iteration.EndDate',  operator: '>=', value:Rally.util.DateTime.toIsoString(this.startDate)}
-                ]
-            };
-            
-            TSUtilities.loadWsapiRecords(config).then({
-                scope: this,
-                success: function(tasks) {
-                    var new_item_count = tasks.length;
-                    var current_count  = timetable.getGrid().getStore().getTotalCount();
-                    
-                    if ( current_count + new_item_count > 100 ) {
-                        Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
-                        this.setLoading(false);
-                    } else {
-                        Ext.Array.each(tasks, function(task){
-                            timetable.addRowForItem(task);
-                        });
+            promises.push(function() {
+                var deferred = Ext.create('Deft.Deferred');
+                        
+                var config = {
+                    model: type,
+                    context: {
+                        project: null
+                    },
+                    fetch:  ['ObjectID','Name','FormattedID','WorkProduct','Project'],
+                    filters: [
+                        {property:'ObjectID', value: oid}
+                    ]
+                };
+                
+                TSUtilities.loadWsapiRecords(config).then({
+                    scope: this,
+                    success: function(items) {
+                        var new_item_count = items.length;
+                        var current_count  = timetable.getGrid().getStore().getTotalCount();
+                        
+                        if ( current_count + new_item_count > 100 ) {
+                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                            me.setLoading(false);
+                        } else {
+                            Ext.Array.each(items, function(task){
+                                timetable.addRowForItem(task);
+                            });
+                        }
+                        
+                        me.setLoading(false);
+                        deferred.resolve(items);
+                    },
+                    failure: function(msg) {
+                        deferred.reject(msg);
                     }
-                    
-                    this.setLoading(false);
-                    
-                },
-                failure: function(msg) {
-                    Ext.Msg.alert("Problem loading current tasks", msg);
-                }
+                });
+                
+                return deferred.promise;
             });
-        }
+        });
+
+        return Deft.Chain.sequence(promises);
+    },
+    
+    _addCurrentTasks: function() {
+        var deferred = Ext.create('Deft.Deferred');
+        
+        var timetable = this.down('tstimetable');
+        if ( !timetable ) { return; }
+    
+        this.setLoading("Finding my current tasks...");
+        
+        var config = {
+            model: 'Task',
+            context: {
+                project: null
+            },
+            fetch:  ['ObjectID','Name','FormattedID','WorkProduct','Project'],
+            filters: [
+                {property:'Owner.ObjectID',value:this.getContext().getUser().ObjectID},
+                {property:'Iteration.StartDate',operator: '<=', value:Rally.util.DateTime.toIsoString(this.startDate)},
+                {property:'Iteration.EndDate',  operator: '>=', value:Rally.util.DateTime.toIsoString(this.startDate)}
+            ]
+        };
+        
+        TSUtilities.loadWsapiRecords(config).then({
+            scope: this,
+            success: function(tasks) {
+                var new_item_count = tasks.length;
+                var current_count  = timetable.getGrid().getStore().getTotalCount();
+                
+                if ( current_count + new_item_count > 100 ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                    this.setLoading(false);
+                } else {
+                    Ext.Array.each(tasks, function(task){
+                        timetable.addRowForItem(task);
+                    });
+                }
+                
+                this.setLoading(false);
+                deferred.resolve(tasks);
+            },
+            failure: function(msg) {
+                deferred.reject(msg);
+            }
+        });
+        
+        return deferred.promise;
     },
     
     _findAndAddTask: function() {
