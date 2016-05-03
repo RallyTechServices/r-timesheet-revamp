@@ -222,9 +222,9 @@ Ext.define("TSTimesheet", {
         var timetable = this.down('tstimetable');
         if (timetable) {
             Ext.create('Rally.technicalservices.ChooserDialog', {
-                artifactTypes: ['hierarchicalrequirement'],
+                artifactTypes: ['hierarchicalrequirement','defect'],
                 autoShow: true,
-                title: 'Choose Story(ies)',
+                title: 'Choose Work Product(s)',
                 multiple: true,
                 filterableFields: [
                     {

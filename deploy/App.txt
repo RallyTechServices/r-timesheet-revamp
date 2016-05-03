@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun May 01 2016 19:22:19 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 03 2016 08:53:31 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun May 01 2016 19:22:19 GMT-0700 (PDT)";
-        var CHECKSUM = 112781164101;
+        var APP_BUILD_DATE = "Tue May 03 2016 08:53:31 GMT-0700 (PDT)";
+        var CHECKSUM = 112837043911;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2210,9 +2210,9 @@ Ext.define("TSTimesheet", {
         var timetable = this.down('tstimetable');
         if (timetable) {
             Ext.create('Rally.technicalservices.ChooserDialog', {
-                artifactTypes: ['hierarchicalrequirement'],
+                artifactTypes: ['hierarchicalrequirement','defect'],
                 autoShow: true,
-                title: 'Choose Story(ies)',
+                title: 'Choose Work Product(s)',
                 multiple: true,
                 filterableFields: [
                     {
