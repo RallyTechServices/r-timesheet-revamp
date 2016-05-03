@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 03 2016 10:01:15 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 03 2016 10:52:08 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 03 2016 10:01:15 GMT-0700 (PDT)";
-        var CHECKSUM = 119302097261;
+        var APP_BUILD_DATE = "Tue May 03 2016 10:52:08 GMT-0700 (PDT)";
+        var CHECKSUM = 126619554723;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1363,6 +1363,70 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         return deferred.promise;
     },
     
+    clearAndRemove: function() {
+        var me = this,
+            promises = [];
+            
+        Rally.getApp().setLoading("Clearing...");
+        
+        Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day_name) {
+            var time_entry_value = me._getTimeEntryValue(day_name);
+            
+            if (!Ext.isEmpty(time_entry_value)){
+                promises.push(function(){
+                    var deferred = Ext.create('Deft.Deferred');
+                    me.set(day_name, 0);
+                    time_entry_value.destroy({
+                        callback: function(result, operation) {
+                            deferred.resolve();
+                        }
+                    });
+                    return deferred.promise;
+                });
+            }
+        });
+        
+        Deft.Chain.sequence(promises).then({
+            scope: this,
+            success: function(results) {
+                console.log('setting total');
+                this.set('TimeEntryValueRecords',[]);
+                this.set('Total', 0);
+                
+                var time_entry_items = this.get('TimeEntryItemRecords');
+                var promises = Ext.Array.map(time_entry_items, function(time_entry_item){
+                    return function() { return me._removeTimeEntryItem(time_entry_item); }
+                });
+                
+                Deft.Chain.sequence(promises).then({
+                    scope: this,
+                    success: function() {
+                        Rally.getApp().setLoading(false);
+                        me.destroy();
+                    },
+                    failure: function(msg) {
+                        console.log("cannot remove all the time entry items because they're used elsewhere",msg);
+                    }
+                }).always(function() { Rally.getApp().setLoading(false); });
+            }
+        });
+        
+    },
+    
+    _removeTimeEntryItem: function(time_entry_value){
+        var deferred = Ext.create('Deft.Deferred');
+        time_entry_value.destroy({
+            callback: function(result, operation) {
+                if ( operation.wasSuccessful() ) {
+                    deferred.resolve();
+                } else {
+                    deferred.reject(operation.error.errors[0]);
+                }
+            }
+        });
+        return deferred.promise;
+    },
+    
     _getTimeEntryValue: function(day_name) {
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  this.get('WeekStartDate');
@@ -1646,10 +1710,24 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     _getColumns: function() {
-        var me = this,
-            columns = [];
+        var me = this;
         
-        var columns = Ext.Array.push(columns,[
+        var columns = [
+            {
+                xtype:'rallyrowactioncolumn',
+                rowActionsFn: function (record) {
+                    return [
+                        {
+                            xtype: 'rallyrecordmenuitem',
+                            text: 'Clear',
+                            record: record,
+                            handler: function(menu,evt) {
+                                menu.record.clearAndRemove();
+                            }
+                        }
+                    ];
+                }
+            },
             {
                 dataIndex: 'Project',
                 text: 'Project',
@@ -1705,7 +1783,7 @@ Ext.define('CA.techservices.TimeTable', {
                     );;
                 }
             }
-        ]);
+        ];
         
         var state_config = {
             dataIndex: 'State',
@@ -1729,7 +1807,7 @@ Ext.define('CA.techservices.TimeTable', {
                                    return;
                                 }
                                 
-                                console.log('saving state', new_value);
+                                //console.log('saving state', new_value);
                                 record.set('State', new_value);
                                 record.save();
                             }
@@ -1822,7 +1900,7 @@ Ext.define('CA.techservices.TimeTable', {
                                 field.setValue(0);
                             }
                             
-                            console.log('change', day, new_value);
+                            //console.log('change', day, new_value);
                             record.set(day, new_value);
                             record.save();
                         }
@@ -1925,12 +2003,12 @@ Ext.define('CA.techservices.TimeTable', {
             return;
         }
         
-        console.log('Adding row for ', item);
+        //console.log('Adding row for ', item);
         
         var item_type = item.get('_type');
         
         var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate);
-        console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
+        //console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
         
         var config = {
             WorkProduct: {
@@ -1959,7 +2037,6 @@ Ext.define('CA.techservices.TimeTable', {
                 tei.save({
                     fetch: me.time_entry_item_fetch,
                     callback: function(result, operation) {
-                        console.log('--', operation);
                         row = Ext.create('CA.techservices.timesheet.TimeRow',{
                             WeekStartDate: me.startDate,
                             TimeEntryItemRecords: [result],

@@ -125,10 +125,24 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     _getColumns: function() {
-        var me = this,
-            columns = [];
+        var me = this;
         
-        var columns = Ext.Array.push(columns,[
+        var columns = [
+            {
+                xtype:'rallyrowactioncolumn',
+                rowActionsFn: function (record) {
+                    return [
+                        {
+                            xtype: 'rallyrecordmenuitem',
+                            text: 'Clear',
+                            record: record,
+                            handler: function(menu,evt) {
+                                menu.record.clearAndRemove();
+                            }
+                        }
+                    ];
+                }
+            },
             {
                 dataIndex: 'Project',
                 text: 'Project',
@@ -184,7 +198,7 @@ Ext.define('CA.techservices.TimeTable', {
                     );;
                 }
             }
-        ]);
+        ];
         
         var state_config = {
             dataIndex: 'State',
@@ -208,7 +222,7 @@ Ext.define('CA.techservices.TimeTable', {
                                    return;
                                 }
                                 
-                                console.log('saving state', new_value);
+                                //console.log('saving state', new_value);
                                 record.set('State', new_value);
                                 record.save();
                             }
@@ -301,7 +315,7 @@ Ext.define('CA.techservices.TimeTable', {
                                 field.setValue(0);
                             }
                             
-                            console.log('change', day, new_value);
+                            //console.log('change', day, new_value);
                             record.set(day, new_value);
                             record.save();
                         }
@@ -404,12 +418,12 @@ Ext.define('CA.techservices.TimeTable', {
             return;
         }
         
-        console.log('Adding row for ', item);
+        //console.log('Adding row for ', item);
         
         var item_type = item.get('_type');
         
         var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate);
-        console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
+        //console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
         
         var config = {
             WorkProduct: {
@@ -438,7 +452,6 @@ Ext.define('CA.techservices.TimeTable', {
                 tei.save({
                     fetch: me.time_entry_item_fetch,
                     callback: function(result, operation) {
-                        console.log('--', operation);
                         row = Ext.create('CA.techservices.timesheet.TimeRow',{
                             WeekStartDate: me.startDate,
                             TimeEntryItemRecords: [result],

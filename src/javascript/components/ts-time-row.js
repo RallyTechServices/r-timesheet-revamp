@@ -311,6 +311,70 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         return deferred.promise;
     },
     
+    clearAndRemove: function() {
+        var me = this,
+            promises = [];
+            
+        Rally.getApp().setLoading("Clearing...");
+        
+        Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day_name) {
+            var time_entry_value = me._getTimeEntryValue(day_name);
+            
+            if (!Ext.isEmpty(time_entry_value)){
+                promises.push(function(){
+                    var deferred = Ext.create('Deft.Deferred');
+                    me.set(day_name, 0);
+                    time_entry_value.destroy({
+                        callback: function(result, operation) {
+                            deferred.resolve();
+                        }
+                    });
+                    return deferred.promise;
+                });
+            }
+        });
+        
+        Deft.Chain.sequence(promises).then({
+            scope: this,
+            success: function(results) {
+                console.log('setting total');
+                this.set('TimeEntryValueRecords',[]);
+                this.set('Total', 0);
+                
+                var time_entry_items = this.get('TimeEntryItemRecords');
+                var promises = Ext.Array.map(time_entry_items, function(time_entry_item){
+                    return function() { return me._removeTimeEntryItem(time_entry_item); }
+                });
+                
+                Deft.Chain.sequence(promises).then({
+                    scope: this,
+                    success: function() {
+                        Rally.getApp().setLoading(false);
+                        me.destroy();
+                    },
+                    failure: function(msg) {
+                        console.log("cannot remove all the time entry items because they're used elsewhere",msg);
+                    }
+                }).always(function() { Rally.getApp().setLoading(false); });
+            }
+        });
+        
+    },
+    
+    _removeTimeEntryItem: function(time_entry_value){
+        var deferred = Ext.create('Deft.Deferred');
+        time_entry_value.destroy({
+            callback: function(result, operation) {
+                if ( operation.wasSuccessful() ) {
+                    deferred.resolve();
+                } else {
+                    deferred.reject(operation.error.errors[0]);
+                }
+            }
+        });
+        return deferred.promise;
+    },
+    
     _getTimeEntryValue: function(day_name) {
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  this.get('WeekStartDate');
