@@ -123,7 +123,16 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         
         { name: 'Task', type:'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task')
+                    || "";
+            }
+        },
+        { name: 'TaskOID', type: 'number', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.ObjectID || -1;
             }
         },
         { name: 'User', type:'object', defaultValue: null, convert: 
@@ -134,26 +143,36 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'WeekStartDate', type:'date' },
         { name: 'WorkProduct', type: 'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct')
+                    || "";
+            }
+        },
+        { name: 'WorkProductOID', type: 'number', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.ObjectID || -1;
             }
         },
         
         { name: 'Iteration', type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Iteration')
-                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Iteration');
+                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Iteration')
+                    || "";
             }
         },
         
         { name: 'ToDo', type: 'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo') || "";
             }
         },
         
         { name: 'State', type: 'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State') || "";
             }
         },
         // WeekStart: Day of Week (0=Sunday, 6=Saturday)

@@ -158,10 +158,11 @@ Ext.define("TSTimesheet", {
     },
     
     _addCurrentTasksAndDefaults: function() {
+        var me = this;
         Deft.Chain.sequence([
             this._addCurrentTasks,
             this._addDefaults
-        ],this);
+        ],this).always(function() { me.setLoading(false); });
     },
     
     _addDefaults: function() {

@@ -126,7 +126,6 @@ Ext.define('CA.techservices.TimeTable', {
             columnCfgs: this._getColumns(),
             showPagingToolbar : false,
             showRowActionsColumn : false,
-            sortableColumns: false,
             disableSelection: true,
             enableColumnMove: false,
             enableColumnResize : false,
@@ -156,6 +155,7 @@ Ext.define('CA.techservices.TimeTable', {
         var columns = [
             {
                 xtype:'rallyrowactioncolumn',
+                sortable: false,
                 rowActionsFn: function (record) {
                     return [
                         {
@@ -199,6 +199,7 @@ Ext.define('CA.techservices.TimeTable', {
                 text: 'Project',
                 flex: 1,
                 editor: null,
+                sortable: false,
                 renderer: function(value, meta, record) {
                     if ( Ext.isEmpty(value) ) {
                         return '--';
@@ -207,16 +208,17 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             },
             {
-                dataIndex: 'WorkProduct',
+                dataIndex: 'WorkProductOID',
                 text: 'Work Item',
                 flex: 1,
                 editor: null,
+                sortable: true,
                 renderer: function(value, meta, record) {
-                    if ( Ext.isEmpty(value) ) {
+                    if ( value < 0 ) {
                         return '--';
                     }
                     return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(value),
+                        Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
                         record.get('WorkProduct').FormattedID,
                         record.get('WorkProduct').Name
                     );;
@@ -226,6 +228,7 @@ Ext.define('CA.techservices.TimeTable', {
                 dataIndex: 'Iteration',
                 text: 'Iteration',
                 editor: null,
+                sortable: false,
                 renderer: function(value,meta,record){
                     if ( Ext.isEmpty(value) ){
                         return "--";
@@ -234,16 +237,17 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             },
             {
-                dataIndex: 'Task',
+                dataIndex: 'TaskOID',
                 text: 'Task',
+                sortable: true,
                 flex: 1,
                 editor: null,
                 renderer: function(value, meta, record) {
-                    if ( Ext.isEmpty(value) ) {
+                    if ( value < 0 ) {
                         return '--';
                     }
                     return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(value),
+                        Rally.nav.Manager.getDetailUrl(record.get('Task')),
                         record.get('Task').FormattedID,
                         record.get('Task').Name
                     );;
@@ -257,6 +261,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
+            sortable: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -292,6 +297,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
+            sortable: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -445,6 +451,7 @@ Ext.define('CA.techservices.TimeTable', {
             html: header_text,
             width: 50, 
             resizable: false,
+            sortable: true,
             align: 'center',
             getEditor: editor_config, 
             field: 'test',

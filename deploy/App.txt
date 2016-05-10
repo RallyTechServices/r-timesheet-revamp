@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon May 09 2016 19:35:37 GMT-0700 (PDT) -->
+    <!--  Build Date: Mon May 09 2016 20:15:17 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon May 09 2016 19:35:37 GMT-0700 (PDT)";
-        var CHECKSUM = 155799526148;
+        var APP_BUILD_DATE = "Mon May 09 2016 20:15:17 GMT-0700 (PDT)";
+        var CHECKSUM = 159425221336;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1175,7 +1175,16 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         
         { name: 'Task', type:'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task')
+                    || "";
+            }
+        },
+        { name: 'TaskOID', type: 'number', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.ObjectID || -1;
             }
         },
         { name: 'User', type:'object', defaultValue: null, convert: 
@@ -1186,26 +1195,36 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'WeekStartDate', type:'date' },
         { name: 'WorkProduct', type: 'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct')
+                    || "";
+            }
+        },
+        { name: 'WorkProductOID', type: 'number', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.ObjectID || -1;
             }
         },
         
         { name: 'Iteration', type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Iteration')
-                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Iteration');
+                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Iteration')
+                    || "";
             }
         },
         
         { name: 'ToDo', type: 'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo') || "";
             }
         },
         
         { name: 'State', type: 'object', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State');
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State') || "";
             }
         },
         // WeekStart: Day of Week (0=Sunday, 6=Saturday)
@@ -1717,7 +1736,6 @@ Ext.define('CA.techservices.TimeTable', {
             columnCfgs: this._getColumns(),
             showPagingToolbar : false,
             showRowActionsColumn : false,
-            sortableColumns: false,
             disableSelection: true,
             enableColumnMove: false,
             enableColumnResize : false,
@@ -1747,6 +1765,7 @@ Ext.define('CA.techservices.TimeTable', {
         var columns = [
             {
                 xtype:'rallyrowactioncolumn',
+                sortable: false,
                 rowActionsFn: function (record) {
                     return [
                         {
@@ -1790,6 +1809,7 @@ Ext.define('CA.techservices.TimeTable', {
                 text: 'Project',
                 flex: 1,
                 editor: null,
+                sortable: false,
                 renderer: function(value, meta, record) {
                     if ( Ext.isEmpty(value) ) {
                         return '--';
@@ -1798,16 +1818,17 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             },
             {
-                dataIndex: 'WorkProduct',
+                dataIndex: 'WorkProductOID',
                 text: 'Work Item',
                 flex: 1,
                 editor: null,
+                sortable: true,
                 renderer: function(value, meta, record) {
-                    if ( Ext.isEmpty(value) ) {
+                    if ( value < 0 ) {
                         return '--';
                     }
                     return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(value),
+                        Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
                         record.get('WorkProduct').FormattedID,
                         record.get('WorkProduct').Name
                     );;
@@ -1817,6 +1838,7 @@ Ext.define('CA.techservices.TimeTable', {
                 dataIndex: 'Iteration',
                 text: 'Iteration',
                 editor: null,
+                sortable: false,
                 renderer: function(value,meta,record){
                     if ( Ext.isEmpty(value) ){
                         return "--";
@@ -1825,16 +1847,17 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             },
             {
-                dataIndex: 'Task',
+                dataIndex: 'TaskOID',
                 text: 'Task',
+                sortable: true,
                 flex: 1,
                 editor: null,
                 renderer: function(value, meta, record) {
-                    if ( Ext.isEmpty(value) ) {
+                    if ( value < 0 ) {
                         return '--';
                     }
                     return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(value),
+                        Rally.nav.Manager.getDetailUrl(record.get('Task')),
                         record.get('Task').FormattedID,
                         record.get('Task').Name
                     );;
@@ -1848,6 +1871,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
+            sortable: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -1883,6 +1907,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
+            sortable: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -2036,6 +2061,7 @@ Ext.define('CA.techservices.TimeTable', {
             html: header_text,
             width: 50, 
             resizable: false,
+            sortable: true,
             align: 'center',
             getEditor: editor_config, 
             field: 'test',
@@ -2413,10 +2439,11 @@ Ext.define("TSTimesheet", {
     },
     
     _addCurrentTasksAndDefaults: function() {
+        var me = this;
         Deft.Chain.sequence([
             this._addCurrentTasks,
             this._addDefaults
-        ],this);
+        ],this).always(function() { me.setLoading(false); });
     },
     
     _addDefaults: function() {
