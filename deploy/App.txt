@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon May 09 2016 20:15:17 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 10 2016 13:47:30 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon May 09 2016 20:15:17 GMT-0700 (PDT)";
-        var CHECKSUM = 159425221336;
+        var APP_BUILD_DATE = "Tue May 10 2016 13:47:30 GMT-0700 (PDT)";
+        var CHECKSUM = 164770016045;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -371,9 +371,14 @@ Ext.define('Rally.technicalservices.InfoLink',{
 /*
  */
 Ext.define('Rally.technicalservices.Logger',{
+    
+    saveForLater: false,
+    logText: null,
+    
     constructor: function(config){
         Ext.apply(this,config);
     },
+    
     log: function(args){
         var timestamp = "[ " + Ext.util.Format.date(new Date(), "Y-m-d H:i:s.u") + " ]";
         //var output_args = arguments;
@@ -384,7 +389,22 @@ Ext.define('Rally.technicalservices.Logger',{
         output_args = Ext.Array.push(output_args,[timestamp]);
         output_args = Ext.Array.push(output_args, Ext.Array.slice(arguments,0));
 
+        if ( this.saveForLater ) {
+            if ( !this.logText ) { 
+                this.logText = "";
+            } else {
+                this.logText = this.logText + '<br/>';
+            }
+            
+            this.logText = this.logText + output_args.join(' ');
+            
+                
+        }
         window.console && console.log.apply(console,output_args);
+    },
+    
+    getLogText: function() {
+        return this.logText;
     }
 
 });
@@ -1687,7 +1707,7 @@ Ext.define('CA.techservices.TimeTable', {
                 var time_entry_values = results[1];
                 this.time_entry_defaults = results[2];
                 
-                console.log('defaults', this.time_entry_defaults);
+                this.logger.log('table with defaults', this.time_entry_defaults);
                 this.rows = this._createRows(time_entry_items, time_entry_values);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
@@ -2148,16 +2168,15 @@ Ext.define('CA.techservices.TimeTable', {
             rows = this.rows;
         
         if ( this._hasRowForItem(item) ) {
-            console.log("Has row already:", item);
+            this.logger.log("Has row already:", item, item.get('ObjectID') );
             return;
         }
         
-        //console.log('Adding row for ', item);
+        this.logger.log('Adding row for ', item, item.get('ObjectID'));
         
         var item_type = item.get('_type');
         
         var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate);
-        //console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
         
         var config = {
             WorkProduct: {
@@ -2303,6 +2322,7 @@ Ext.define("TSTimesheet", {
     },
     
     launch: function() {
+        this.logger.saveForLater = true;
         this._addSelectors(this.down('#selector_box'));
     },
     
@@ -2440,10 +2460,16 @@ Ext.define("TSTimesheet", {
     
     _addCurrentTasksAndDefaults: function() {
         var me = this;
+        this.logger.log('_addCurrentTasksAndDefaults');
+        
         Deft.Chain.sequence([
             this._addCurrentTasks,
             this._addDefaults
-        ],this).always(function() { me.setLoading(false); });
+        ],this).then({
+            failure: function(msg) {
+                Ext.Alert.msg('Problem adding current items', msg);
+            }
+        }).always(function() { me.setLoading(false); });
     },
     
     _addDefaults: function() {
@@ -2456,7 +2482,11 @@ Ext.define("TSTimesheet", {
         var promises = [];
         this.setLoading('Finding my defaults...');
         
+        this.logger.log('finding defaults: ');
+        
         Ext.Object.each(defaults, function(oid,type){
+            me.logger.log('  ', oid, type);
+            
             if ( type == false ) {
                 return;
             }
@@ -2490,6 +2520,7 @@ Ext.define("TSTimesheet", {
                             });
                         }
                         
+                        me.logger.log('Found ', items.length, type, ' items');
                         me.setLoading(false);
                         deferred.resolve(items);
                     },
@@ -2540,6 +2571,8 @@ Ext.define("TSTimesheet", {
                         timetable.addRowForItem(task);
                     });
                 }
+                
+                this.logger.log('Found ', tasks.length, ' tasks in current iterations');
                 
                 this.setLoading(false);
                 deferred.resolve(tasks);
@@ -2735,8 +2768,10 @@ Ext.define("TSTimesheet", {
             region: 'center',
             layout: 'fit',
             margin: 15,
+            
             startDate: this.startDate,
             editable: editable,
+            logger: this.logger,
             listeners: {
                 scope: this,
                 gridReady: function() {
@@ -2792,9 +2827,39 @@ Ext.define("TSTimesheet", {
                 text: 'About...',
                 handler: this._launchInfo,
                 scope: this
+            },
+            {
+                text: 'Show Log',
+                handler: this._showLog,
+                scope: this
             }
         ];
     },
+    
+    _showLog: function() {
+        var text = this.logger.getLogText();
+        
+        this.popup = Ext.create('Rally.ui.dialog.Dialog', {
+            width      : Ext.getBody().getWidth() - 20,
+            height     : Ext.getBody().getHeight() - 20,
+            closable   : true,
+            title      : 'Log',
+            autoShow   : true,
+            layout     : 'border',
+            defaults   : {
+                layout : 'fit',
+                width  : '50%',
+                border : false
+            },
+            items: [{
+                region : 'center',
+                xtype: 'rallyrichtexteditor',
+                value: text,
+                height: Ext.getBody().getHeight() - 20
+            }]
+        });
+    },
+    
     
     _launchInfo: function() {
         if ( this.about_dialog ) { this.about_dialog.destroy(); }

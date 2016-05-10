@@ -77,7 +77,7 @@ Ext.define('CA.techservices.TimeTable', {
                 var time_entry_values = results[1];
                 this.time_entry_defaults = results[2];
                 
-                console.log('defaults', this.time_entry_defaults);
+                this.logger.log('table with defaults', this.time_entry_defaults);
                 this.rows = this._createRows(time_entry_items, time_entry_values);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
@@ -538,16 +538,15 @@ Ext.define('CA.techservices.TimeTable', {
             rows = this.rows;
         
         if ( this._hasRowForItem(item) ) {
-            console.log("Has row already:", item);
+            this.logger.log("Has row already:", item, item.get('ObjectID') );
             return;
         }
         
-        //console.log('Adding row for ', item);
+        this.logger.log('Adding row for ', item, item.get('ObjectID'));
         
         var item_type = item.get('_type');
         
         var sunday_start = TSDateUtils.getBeginningOfWeekISOForLocalDate(me.startDate);
-        //console.log("For table: Creating TEI for week starting:", sunday_start, " (", me.startDate, ")");
         
         var config = {
             WorkProduct: {

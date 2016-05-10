@@ -22,6 +22,7 @@ Ext.define("TSTimesheet", {
     },
     
     launch: function() {
+        this.logger.saveForLater = true;
         this._addSelectors(this.down('#selector_box'));
     },
     
@@ -159,10 +160,16 @@ Ext.define("TSTimesheet", {
     
     _addCurrentTasksAndDefaults: function() {
         var me = this;
+        this.logger.log('_addCurrentTasksAndDefaults');
+        
         Deft.Chain.sequence([
             this._addCurrentTasks,
             this._addDefaults
-        ],this).always(function() { me.setLoading(false); });
+        ],this).then({
+            failure: function(msg) {
+                Ext.Alert.msg('Problem adding current items', msg);
+            }
+        }).always(function() { me.setLoading(false); });
     },
     
     _addDefaults: function() {
@@ -175,7 +182,11 @@ Ext.define("TSTimesheet", {
         var promises = [];
         this.setLoading('Finding my defaults...');
         
+        this.logger.log('finding defaults: ');
+        
         Ext.Object.each(defaults, function(oid,type){
+            me.logger.log('  ', oid, type);
+            
             if ( type == false ) {
                 return;
             }
@@ -209,6 +220,7 @@ Ext.define("TSTimesheet", {
                             });
                         }
                         
+                        me.logger.log('Found ', items.length, type, ' items');
                         me.setLoading(false);
                         deferred.resolve(items);
                     },
@@ -259,6 +271,8 @@ Ext.define("TSTimesheet", {
                         timetable.addRowForItem(task);
                     });
                 }
+                
+                this.logger.log('Found ', tasks.length, ' tasks in current iterations');
                 
                 this.setLoading(false);
                 deferred.resolve(tasks);
@@ -454,8 +468,10 @@ Ext.define("TSTimesheet", {
             region: 'center',
             layout: 'fit',
             margin: 15,
+            
             startDate: this.startDate,
             editable: editable,
+            logger: this.logger,
             listeners: {
                 scope: this,
                 gridReady: function() {
@@ -511,9 +527,39 @@ Ext.define("TSTimesheet", {
                 text: 'About...',
                 handler: this._launchInfo,
                 scope: this
+            },
+            {
+                text: 'Show Log',
+                handler: this._showLog,
+                scope: this
             }
         ];
     },
+    
+    _showLog: function() {
+        var text = this.logger.getLogText();
+        
+        this.popup = Ext.create('Rally.ui.dialog.Dialog', {
+            width      : Ext.getBody().getWidth() - 20,
+            height     : Ext.getBody().getHeight() - 20,
+            closable   : true,
+            title      : 'Log',
+            autoShow   : true,
+            layout     : 'border',
+            defaults   : {
+                layout : 'fit',
+                width  : '50%',
+                border : false
+            },
+            items: [{
+                region : 'center',
+                xtype: 'rallyrichtexteditor',
+                value: text,
+                height: Ext.getBody().getHeight() - 20
+            }]
+        });
+    },
+    
     
     _launchInfo: function() {
         if ( this.about_dialog ) { this.about_dialog.destroy(); }
