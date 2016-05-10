@@ -16,7 +16,8 @@ Ext.define("TSTimesheet", {
     config: {
         defaultSettings: {
             /* 0=sunday, 6=saturday */
-            weekStartsOn: 0 
+            weekStartsOn: 0,
+            showAddMyStoriesButton: false
         }
     },
     
@@ -69,6 +70,20 @@ Ext.define("TSTimesheet", {
             }
         });
         
+        if (this.getSetting('showAddMyStoriesButton')) {
+            container.add({
+                xtype:'rallybutton',
+                text: '+ my <span class="icon-story"> </span>',
+                toolTipText: "(add my stories)", 
+                padding: 2,
+                disabled: false,
+                listeners: {
+                    scope: this,
+                    click: this._addCurrentStories
+                }
+            });
+        }
+        
         container.add({
             xtype:'rallybutton',
             text: '+<span class="icon-task"> </span>',
@@ -91,6 +106,55 @@ Ext.define("TSTimesheet", {
             }
         });
         
+    },
+    
+    // my workproducts are stories I own and stories that have tasks I own
+    _addCurrentStories: function() {
+        var timetable = this.down('tstimetable');
+        if ( !timetable ) { return; }
+    
+        this.setLoading("Finding my current stories...");
+        
+        var my_filters = Rally.data.wsapi.Filter.or([
+            {property:'Owner.ObjectID',value:this.getContext().getUser().ObjectID},
+            {property:'Tasks.Owner.ObjectID',value:this.getContext().getUser().ObjectID}
+        ]);
+        
+        var current_filters = Rally.data.wsapi.Filter.and([
+            {property:'Iteration.StartDate',operator: '<=', value:Rally.util.DateTime.toIsoString(this.startDate)},
+            {property:'Iteration.EndDate',  operator: '>=', value:Rally.util.DateTime.toIsoString(this.startDate)}
+        ]);
+        
+        var config = {
+            model: 'HierarchicalRequirement',
+            context: {
+                project: null
+            },
+            fetch:  ['ObjectID','Name','FormattedID','WorkProduct','Project'],
+            filters: current_filters.and(my_filters)
+        };
+        
+        TSUtilities.loadWsapiRecords(config).then({
+            scope: this,
+            success: function(items) {
+                var new_item_count = items.length;
+                var current_count  = timetable.getGrid().getStore().getTotalCount();
+                
+                if ( current_count + new_item_count > 100 ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                    this.setLoading(false);
+                } else {
+                    Ext.Array.each(items, function(item){
+                        timetable.addRowForItem(item);
+                    });
+                }
+                
+                this.setLoading(false);
+            },
+            failure: function(msg) {
+                Ext.Msg.alert('Problem with my stories', msg);
+            }
+        });
     },
     
     _addCurrentTasksAndDefaults: function() {
@@ -401,6 +465,8 @@ Ext.define("TSTimesheet", {
     },
 
     getSettingsFields: function() {
+        var check_box_margins = '5 0 5 0';
+        
         var days_of_week = [
             {Name:'Sunday', Value:0},
             {Name:'Monday', Value:1},
@@ -425,7 +491,17 @@ Ext.define("TSTimesheet", {
                 data: days_of_week
             }),
             readyEvent: 'ready'
-        }];
+        },
+        {
+            name: 'showAddMyStoriesButton',
+            xtype: 'rallycheckboxfield',
+            boxLabelAlign: 'after',
+            fieldLabel: '',
+            margin: check_box_margins,
+            boxLabel: 'Show the Add My Stories Button<br/><span style="color:#999999;"><i>User can add stories in a current sprint that they own or that have tasks they own.</i></span>'
+        }
+        
+        ];
     },
     
     getOptions: function() {
