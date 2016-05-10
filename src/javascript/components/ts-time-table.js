@@ -314,6 +314,10 @@ Ext.define('CA.techservices.TimeTable', {
                         }
                     })
                 });
+            },
+            renderer: function(value,meta,record){
+                meta.tdCls = "ts-right-border";
+                return value;
             }
         };
         

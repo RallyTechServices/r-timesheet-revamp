@@ -21,3 +21,8 @@ td.ts-weekend-cell {
 span.red {
     color: red;
 }
+
+td.ts-right-border {
+    border-style: solid;
+    border-right: thick double #aaa;
+}
