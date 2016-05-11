@@ -21,7 +21,8 @@ Ext.define('CA.techservices.TimeTable', {
         startDate: null,
         editable: true,
         timesheetUser: null,
-        pinKey: 'CA.techservices.timesheet.pin'
+        pinKey: 'CA.techservices.timesheet.pin',
+        showEditTimeDetailsMenuItem: false
     },
     
     constructor: function (config) {
@@ -149,6 +150,62 @@ Ext.define('CA.techservices.TimeTable', {
         this.fireEvent('gridReady', this, this.grid);
     },
     
+    _getRowActions: function(record) {
+        // 
+        var me = this;
+        
+        var actions = [
+            {   
+                xtype: 'rallyrecordmenuitem',
+                text: 'Set as Default',
+                predicate: function() {
+                    return !this.record.isPinned();
+                },
+                handler: function(menu,evt) {
+                    me._pinRecord(menu.record);
+                },
+                record: record
+            },
+            {
+                xtype: 'rallyrecordmenuitem',
+                text: 'Unset Default',
+                predicate: function() {
+                    return this.record.isPinned();
+                },
+                handler: function(menu,evt) {
+                    me._unpinRecord(menu.record);
+                },
+                record: record
+            },
+            {
+                xtype: 'rallyrecordmenuitem',
+                text: 'Clear',
+                record: record,
+                handler: function(menu,evt) {
+                    var row = menu.record;
+                    Ext.Array.remove(me.rows, row);
+                    row.clearAndRemove();
+                    
+                }
+            }
+        ];
+                
+        me.logger.log(me,me.showEditTimeDetailsMenuItem);
+        if ( me.showEditTimeDetailsMenuItem ) { 
+            actions.push({
+                xtype: 'rallyrecordmenuitem',
+                text: 'Edit Time',
+                record: record,
+                handler: function(menu,evt) {
+                    var row = menu.record;
+                    me._launchTimeDetailsDialog(row);
+                }
+            });
+        }
+        return actions;
+        
+    },
+    
     _getColumns: function() {
         var me = this;
         
@@ -156,42 +213,9 @@ Ext.define('CA.techservices.TimeTable', {
             {
                 xtype:'rallyrowactioncolumn',
                 sortable: false,
+                scope: me,
                 rowActionsFn: function (record) {
-                    return [
-                        {
-                            xtype: 'rallyrecordmenuitem',
-                            text: 'Set as Default',
-                            predicate: function() {
-                                return !this.record.isPinned();
-                            },
-                            handler: function(menu,evt) {
-                                me._pinRecord(menu.record);
-                            },
-                            record: record
-                        },
-                        {
-                            xtype: 'rallyrecordmenuitem',
-                            text: 'Unset Default',
-                            predicate: function() {
-                                return this.record.isPinned();
-                            },
-                            handler: function(menu,evt) {
-                                me._unpinRecord(menu.record);
-                            },
-                            record: record
-                        },
-                        {
-                            xtype: 'rallyrecordmenuitem',
-                            text: 'Clear',
-                            record: record,
-                            handler: function(menu,evt) {
-                                var row = menu.record;
-                                Ext.Array.remove(me.rows, row);
-                                row.clearAndRemove();
-                                
-                            }
-                        }
-                    ];
+                    return me._getRowActions(record);
                 }
             },
             {
@@ -618,6 +642,12 @@ Ext.define('CA.techservices.TimeTable', {
         });
         
         return hasRow;
+    },
+    
+    _launchTimeDetailsDialog: function(row) {
+        Ext.create('CA.technicalservices.TimeDetailsDialog',{
+            row: row
+        });
     },
     
     _loadTimeEntryItems: function() {

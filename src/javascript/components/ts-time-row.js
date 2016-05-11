@@ -313,7 +313,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
             
-        var time_entry_value = this._getTimeEntryValue(day);
+        var time_entry_value = this.getTimeEntryValue(day);
         
         if ( Ext.isEmpty(time_entry_value) ) {            
             return this._createTimeEntryValue(day,value);
@@ -339,7 +339,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         Rally.getApp().setLoading("Clearing...");
         
         Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day_name) {
-            var time_entry_value = me._getTimeEntryValue(day_name);
+            var time_entry_value = me.getTimeEntryValue(day_name);
             
             if (!Ext.isEmpty(time_entry_value)){
                 promises.push(function(){
@@ -396,7 +396,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         return deferred.promise;
     },
     
-    _getTimeEntryValue: function(day_name) {
+    getTimeEntryValue: function(day_name) {
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  this.get('WeekStartDate');
         var time_entry_values = this.get('TimeEntryValueRecords');

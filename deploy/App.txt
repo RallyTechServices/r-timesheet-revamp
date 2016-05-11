@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 10 2016 13:47:30 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 10 2016 20:48:54 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 10 2016 13:47:30 GMT-0700 (PDT)";
-        var CHECKSUM = 164770016045;
+        var APP_BUILD_DATE = "Tue May 10 2016 20:48:54 GMT-0700 (PDT)";
+        var CHECKSUM = 184705246434;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1070,6 +1070,161 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
     }
 });
 
+Ext.define('CA.technicalservices.TimeDetailsDialog', {
+    extend: 'Rally.ui.dialog.Dialog',
+    alias:'widget.tstimedetailsdialog',
+
+    closable: true,
+
+    layout: 'border',
+    
+    currentDay: null,
+    
+    config: {
+        /**
+         * @cfg {String}
+         * Title to give to the dialog
+         */
+        title: 'Time Details',
+        
+        row: null, // a time sheet row,
+        
+        autoShow: true,
+        
+        height: 400,
+        width: 600
+
+    },
+
+    items: [{
+        xtype: 'container',
+        layout: 'hbox',
+        items: [
+            {
+                xtype: 'container',
+                itemId: 'daysContainer',
+                layout: 'vbox',
+                width: 150
+            },
+            {
+                xtype: 'container',
+                itemId: 'dayContainer',
+//                border: 1,
+//                style: {borderColor:'#f00', borderStyle:'solid', borderWidth:'1px'},
+                width: 450
+            }
+        ]
+    }],
+
+    constructor: function(config) {
+        this.mergeConfig(config);
+
+        this.callParent([this.config]);
+    },
+
+    initComponent: function() {
+        this.callParent(arguments);
+        
+        this.currentDay = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(new Date());
+        
+        this._buildDays();
+        this._buildForm();
+    },
+    
+    _buildDays: function() {
+        var me = this,
+            days = CA.techservices.timesheet.TimeRowUtils.daysInOrder;
+            
+        var container = this.down('#daysContainer');
+        this.day_boxes = {};
+        
+        Ext.Array.each(days, function(day){
+            me.day_boxes[day] = container.add({
+                xtype:'container',
+                margin: 10,
+                tpl: '<span class="day_name">{day}</span>: <span class="day_value">{value}</day>'
+            });
+            
+            var time_entry_value = me.row.getTimeEntryValue(day);
+            var value = 0;
+            
+            if (! Ext.isEmpty(time_entry_value) ) {
+                value = time_entry_value.get('Hours');
+            }
+            me.day_boxes[day].update({day: day, value: value});
+        });
+    },
+    
+    _buildForm: function() {
+        var me = this,
+            container = this.down('#dayContainer');
+        
+        this._buildNavigation(container); 
+    },
+    
+    _buildNavigation: function(container) {
+        var me = this;
+        
+        var selector_box = container.add({
+            xtype:'container',
+            layout:'hbox'
+        });
+        
+        var display_box = container.add({
+            xtype:'container',
+            layout:'vbox'
+        });
+        
+        selector_box.add({
+            xtype:'rallybutton',
+            text:'<span class="icon-left"> </span>', 
+            cls: 'secondary small',
+            listeners: {
+                scope: this,
+                click: this._moveLeft
+            }
+        });
+        
+        selector_box.add({ xtype:'container', flex: 1 });
+        
+        selector_box.add({
+            xtype:'container', 
+            tpl: '{day}',
+            itemId: 'day_selector_display'
+        }).update({ day: CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay] });
+
+        selector_box.add({ xtype:'container', flex: 1 });
+        
+        selector_box.add({
+            xtype:'rallybutton',
+            text:'<span class="icon-right"> </span>', 
+            cls: 'secondary small',
+            listeners: {
+                scope: this,
+                click: this._moveRight
+            }
+        });
+        
+    },
+    
+    _moveLeft: function() {
+        this.currentDay = this.currentDay - 1;
+        if ( this.currentDay < 0 ) {
+            this.currentDay = 6;
+        }
+        this.down('#day_selector_display').update({ day: CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay] });
+    },
+    
+    _moveRight: function() {
+        this.currentDay = this.currentDay + 1;
+        if ( this.currentDay > 6 ) {
+            this.currentDay = 0;
+        }
+        this.down('#day_selector_display').update({ day: CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay] });
+    }
+});
+    
+    
 Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     singleton: true,
     
@@ -1385,7 +1540,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
             
-        var time_entry_value = this._getTimeEntryValue(day);
+        var time_entry_value = this.getTimeEntryValue(day);
         
         if ( Ext.isEmpty(time_entry_value) ) {            
             return this._createTimeEntryValue(day,value);
@@ -1411,7 +1566,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         Rally.getApp().setLoading("Clearing...");
         
         Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day_name) {
-            var time_entry_value = me._getTimeEntryValue(day_name);
+            var time_entry_value = me.getTimeEntryValue(day_name);
             
             if (!Ext.isEmpty(time_entry_value)){
                 promises.push(function(){
@@ -1468,7 +1623,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         return deferred.promise;
     },
     
-    _getTimeEntryValue: function(day_name) {
+    getTimeEntryValue: function(day_name) {
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  this.get('WeekStartDate');
         var time_entry_values = this.get('TimeEntryValueRecords');
@@ -1651,7 +1806,8 @@ Ext.define('CA.techservices.TimeTable', {
         startDate: null,
         editable: true,
         timesheetUser: null,
-        pinKey: 'CA.techservices.timesheet.pin'
+        pinKey: 'CA.techservices.timesheet.pin',
+        showEditTimeDetailsMenuItem: false
     },
     
     constructor: function (config) {
@@ -1779,6 +1935,62 @@ Ext.define('CA.techservices.TimeTable', {
         this.fireEvent('gridReady', this, this.grid);
     },
     
+    _getRowActions: function(record) {
+        // 
+        var me = this;
+        
+        var actions = [
+            {   
+                xtype: 'rallyrecordmenuitem',
+                text: 'Set as Default',
+                predicate: function() {
+                    return !this.record.isPinned();
+                },
+                handler: function(menu,evt) {
+                    me._pinRecord(menu.record);
+                },
+                record: record
+            },
+            {
+                xtype: 'rallyrecordmenuitem',
+                text: 'Unset Default',
+                predicate: function() {
+                    return this.record.isPinned();
+                },
+                handler: function(menu,evt) {
+                    me._unpinRecord(menu.record);
+                },
+                record: record
+            },
+            {
+                xtype: 'rallyrecordmenuitem',
+                text: 'Clear',
+                record: record,
+                handler: function(menu,evt) {
+                    var row = menu.record;
+                    Ext.Array.remove(me.rows, row);
+                    row.clearAndRemove();
+                    
+                }
+            }
+        ];
+                
+        me.logger.log(me,me.showEditTimeDetailsMenuItem);
+        if ( me.showEditTimeDetailsMenuItem ) { 
+            actions.push({
+                xtype: 'rallyrecordmenuitem',
+                text: 'Edit Time',
+                record: record,
+                handler: function(menu,evt) {
+                    var row = menu.record;
+                    me._launchTimeDetailsDialog(row);
+                }
+            });
+        }
+        return actions;
+        
+    },
+    
     _getColumns: function() {
         var me = this;
         
@@ -1786,42 +1998,9 @@ Ext.define('CA.techservices.TimeTable', {
             {
                 xtype:'rallyrowactioncolumn',
                 sortable: false,
+                scope: me,
                 rowActionsFn: function (record) {
-                    return [
-                        {
-                            xtype: 'rallyrecordmenuitem',
-                            text: 'Set as Default',
-                            predicate: function() {
-                                return !this.record.isPinned();
-                            },
-                            handler: function(menu,evt) {
-                                me._pinRecord(menu.record);
-                            },
-                            record: record
-                        },
-                        {
-                            xtype: 'rallyrecordmenuitem',
-                            text: 'Unset Default',
-                            predicate: function() {
-                                return this.record.isPinned();
-                            },
-                            handler: function(menu,evt) {
-                                me._unpinRecord(menu.record);
-                            },
-                            record: record
-                        },
-                        {
-                            xtype: 'rallyrecordmenuitem',
-                            text: 'Clear',
-                            record: record,
-                            handler: function(menu,evt) {
-                                var row = menu.record;
-                                Ext.Array.remove(me.rows, row);
-                                row.clearAndRemove();
-                                
-                            }
-                        }
-                    ];
+                    return me._getRowActions(record);
                 }
             },
             {
@@ -2250,6 +2429,12 @@ Ext.define('CA.techservices.TimeTable', {
         return hasRow;
     },
     
+    _launchTimeDetailsDialog: function(row) {
+        Ext.create('CA.technicalservices.TimeDetailsDialog',{
+            row: row
+        });
+    },
+    
     _loadTimeEntryItems: function() {
         this.setLoading('Loading time entry items...');
         
@@ -2317,7 +2502,8 @@ Ext.define("TSTimesheet", {
         defaultSettings: {
             /* 0=sunday, 6=saturday */
             weekStartsOn: 0,
-            showAddMyStoriesButton: false
+            showAddMyStoriesButton: false,
+            showEditTimeDetailsMenuItem: false
         }
     },
     
@@ -2771,7 +2957,8 @@ Ext.define("TSTimesheet", {
             
             startDate: this.startDate,
             editable: editable,
-            logger: this.logger,
+            logger: me.logger,
+            showEditTimeDetailsMenuItem: me.getSetting('showEditTimeDetailsMenuItem'),
             listeners: {
                 scope: this,
                 gridReady: function() {
@@ -2807,6 +2994,7 @@ Ext.define("TSTimesheet", {
             store: Ext.create('Rally.data.custom.Store',{
                 data: days_of_week
             }),
+            
             readyEvent: 'ready'
         },
         {
@@ -2816,8 +3004,16 @@ Ext.define("TSTimesheet", {
             fieldLabel: '',
             margin: check_box_margins,
             boxLabel: 'Show the Add My Stories Button<br/><span style="color:#999999;"><i>User can add stories in a current sprint that they own or that have tasks they own.</i></span>'
-        }
+        },
+        {
+            name: 'showEditTimeDetailsMenuItem',
+            xtype: 'rallycheckboxfield',
+            boxLabelAlign: 'after',
+            fieldLabel: '',
+            margin: check_box_margins,
+            boxLabel: 'Include Time Details Option in Menu (Experimental)<br/><span style="color:#999999;"><i>User can enter time ranges during the day to calculate time entry. </i></span>'
         
+        }
         ];
     },
     

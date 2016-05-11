@@ -17,7 +17,8 @@ Ext.define("TSTimesheet", {
         defaultSettings: {
             /* 0=sunday, 6=saturday */
             weekStartsOn: 0,
-            showAddMyStoriesButton: false
+            showAddMyStoriesButton: false,
+            showEditTimeDetailsMenuItem: false
         }
     },
     
@@ -471,7 +472,8 @@ Ext.define("TSTimesheet", {
             
             startDate: this.startDate,
             editable: editable,
-            logger: this.logger,
+            logger: me.logger,
+            showEditTimeDetailsMenuItem: me.getSetting('showEditTimeDetailsMenuItem'),
             listeners: {
                 scope: this,
                 gridReady: function() {
@@ -507,6 +509,7 @@ Ext.define("TSTimesheet", {
             store: Ext.create('Rally.data.custom.Store',{
                 data: days_of_week
             }),
+            
             readyEvent: 'ready'
         },
         {
@@ -516,8 +519,16 @@ Ext.define("TSTimesheet", {
             fieldLabel: '',
             margin: check_box_margins,
             boxLabel: 'Show the Add My Stories Button<br/><span style="color:#999999;"><i>User can add stories in a current sprint that they own or that have tasks they own.</i></span>'
-        }
+        },
+        {
+            name: 'showEditTimeDetailsMenuItem',
+            xtype: 'rallycheckboxfield',
+            boxLabelAlign: 'after',
+            fieldLabel: '',
+            margin: check_box_margins,
+            boxLabel: 'Include Time Details Option in Menu (Experimental)<br/><span style="color:#999999;"><i>User can enter time ranges during the day to calculate time entry. </i></span>'
         
+        }
         ];
     },
     
