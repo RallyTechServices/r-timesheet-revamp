@@ -242,35 +242,42 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             layout: 'hbox',
             defaults: { margin: 3 }
         });
+        
+        var hours = [
+            {"display":"12A", "value":0},
+            {"display":"1 A", "value":1},
+            {"display":"2 A", "value":2},
+            {"display":"3 A", "value":3},
+            {"display":"4 A", "value":4},
+            {"display":"5 A", "value":5},
+            {"display":"6 A", "value":6},
+            {"display":"7 A", "value":7},
+            {"display":"8 A", "value":8},
+            {"display":"9 A", "value":9},
+            {"display":"10A", "value":10},
+            {"display":"11A", "value":11},
+            {"display":"12A", "value":12},
+            {"display":"1 P", "value":13},
+            {"display":"2 P", "value":14},
+            {"display":"3 P", "value":15},
+            {"display":"4 P", "value":16},
+            {"display":"5 P", "value":17},
+            {"display":"6 P", "value":18},
+            {"display":"7 P", "value":19},
+            {"display":"8 P", "value":20},
+            {"display":"9 P", "value":21},
+            {"display":"10P", "value":22},
+            {"display":"11P", "value":23}
+        ];
        
-        var hour_store = Ext.create('Rally.data.custom.Store', {
+        var hour_store_start = Ext.create('Rally.data.custom.Store', {
             fields: ['display', 'value'],
-            data : [
-                {"display":"12A", "value":0},
-                {"display":"1 A", "value":1},
-                {"display":"2 A", "value":2},
-                {"display":"3 A", "value":3},
-                {"display":"4 A", "value":4},
-                {"display":"5 A", "value":5},
-                {"display":"6 A", "value":6},
-                {"display":"7 A", "value":7},
-                {"display":"8 A", "value":8},
-                {"display":"9 A", "value":9},
-                {"display":"10A", "value":10},
-                {"display":"11A", "value":11},
-                {"display":"12A", "value":12},
-                {"display":"1 P", "value":13},
-                {"display":"2 P", "value":14},
-                {"display":"3 P", "value":15},
-                {"display":"4 P", "value":16},
-                {"display":"5 P", "value":17},
-                {"display":"6 P", "value":18},
-                {"display":"7 P", "value":19},
-                {"display":"8 P", "value":20},
-                {"display":"9 P", "value":21},
-                {"display":"10P", "value":22},
-                {"display":"11P", "value":23}
-            ]
+            data : Ext.clone(hours)
+        });
+               
+        var hour_store_end = Ext.create('Rally.data.custom.Store', {
+            fields: ['display', 'value'],
+            data : Ext.clone(hours)
         });
         
         var now = new Date();
@@ -279,7 +286,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             itemId: 'start_hour',
             fieldLabel: ' ',
             allowNoEntry: false,
-            store: Ext.clone(hour_store),
+            store: hour_store_start,
             queryMode: 'local',
             displayField: 'display',
             valueField: 'value',
@@ -308,7 +315,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             noEntryText: ' ',
             noEntryValue: null,
             fieldLabel: 'to',
-            store: Ext.clone(hour_store),
+            store: hour_store_end,
             queryMode: 'local',
             displayField: 'display',
             valueField: 'value',
