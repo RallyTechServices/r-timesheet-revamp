@@ -519,7 +519,7 @@ Ext.define("TSTimesheet", {
             boxLabelAlign: 'after',
             fieldLabel: '',
             margin: check_box_margins,
-            boxLabel: 'Show the Add My Stories Button<br/><span style="color:#999999;"><i>User can add stories in a current sprint that they own or that have tasks they own.</i></span>'
+            boxLabel: 'Show the Add My Stories Button<br/><span style="color:#999999;"><i>User can add stories in a current sprint that they own or that have tasks they own (does not look for default items).</i></span>'
         },
         {
             name: 'showEditTimeDetailsMenuItem',
@@ -571,7 +571,6 @@ Ext.define("TSTimesheet", {
             }]
         });
     },
-    
     
     _launchInfo: function() {
         if ( this.about_dialog ) { this.about_dialog.destroy(); }
