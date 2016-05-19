@@ -255,6 +255,19 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
     },
     
+    _removeTimeBlock: function(block,fields) {
+        console.log('remove', block);
+
+        Ext.Array.each(fields.reverse(), function(field){
+            field.setValue(0);
+        });
+        
+        this.row.removeTimeBlock(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay], block.itemId);
+        block.destroy();
+        
+        this._enableDisableAddButton();
+    },
+    
     _addTimeBlock: function(detail) {
         var container = this.down('#time_block_container');
         
@@ -373,8 +386,6 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             width: 65,
             labelWidth: 5
         };
-
-        console.log('--', detail);
         
         hour_field_start.value = new Date().getHours();
         minute_field_start.value = new Date().getMinutes();
@@ -385,7 +396,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             hour_field_end.value = detail.end_hour;
             minute_field_end.value = detail.end_minute;
         }
-
+        
         var fields = [
             block.add(hour_field_start),
             block.add(minute_field_start),
@@ -395,6 +406,19 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         block.add({xtype: 'container', flex: 1 });
         block.add(total_field);
+        
+        block.add({
+            xtype:'rallybutton',
+            itemId: 'remove_block_button',
+            cls: 'no-border',
+            text: '<span class="icon-cancel"> </span>',
+            listeners: {
+                scope: this,
+                click: function(button) {
+                    this._removeTimeBlock(block, fields);
+                }
+            }
+        });
         
         Ext.Array.each(fields, function(field){
             field.on('change',function() { this._setValidBlockValues(block); }, this);
@@ -476,6 +500,10 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         var disabled = false;
         Ext.Array.each(this.timeBlocks, function(block){
+            if ( ! block.down("#block_total") ) {
+                return;
+            }
+            
             var total = block.down('#block_total').getValue() || 0;
 
             if ( total <= 0 ) {
@@ -490,8 +518,10 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         var total = 0;
        
         Ext.Array.each(this.timeBlocks, function(block){
-            var value = block.down('#block_total').getValue() || 0;
-            total += value;
+            if ( !Ext.isEmpty(block) ) {
+                var value = ( block.down('#block_total') && block.down('#block_total').getValue()) || 0;
+                total += value;
+            }
         });
         
         var adjustment_box = this.down('#adjustment_box');

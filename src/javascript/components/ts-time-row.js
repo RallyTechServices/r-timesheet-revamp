@@ -729,6 +729,26 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
     },
     
+    removeTimeBlock: function(day, block_id){
+        var block_set = this.get('_DetailBlocks');
+        if ( Ext.isEmpty(block_set) && ! Ext.isEmpty(this.get('DetailPreference')) ){
+            block_set = Ext.JSON.decode(this.get('DetailPreference').get('Value'));
+            this.set('_DetailBlocks', block_set);
+        }
+        
+        var blocks = this.getTimeBlocks(day);
+        
+        var new_blocks = Ext.Array.filter(blocks, function(block){
+            console.log('comparing', block_id, block.id);
+            return ( block_id != block.id );
+        });
+        
+        block_set[day] = new_blocks;
+                
+        this.set('_DetailBlocks', block_set); 
+        this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
+    },
+    
     getTimeBlock: function(day, id) {
         var blocks = this.getTimeBlocks(day);
         var block = null;

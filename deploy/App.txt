@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu May 19 2016 14:20:08 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu May 19 2016 15:18:51 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu May 19 2016 14:20:08 GMT-0700 (PDT)";
-        var CHECKSUM = 264025167373;
+        var APP_BUILD_DATE = "Thu May 19 2016 15:18:51 GMT-0700 (PDT)";
+        var CHECKSUM = 273229463161;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1327,6 +1327,19 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
     },
     
+    _removeTimeBlock: function(block,fields) {
+        console.log('remove', block);
+
+        Ext.Array.each(fields.reverse(), function(field){
+            field.setValue(0);
+        });
+        
+        this.row.removeTimeBlock(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay], block.itemId);
+        block.destroy();
+        
+        this._enableDisableAddButton();
+    },
+    
     _addTimeBlock: function(detail) {
         var container = this.down('#time_block_container');
         
@@ -1445,8 +1458,6 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             width: 65,
             labelWidth: 5
         };
-
-        console.log('--', detail);
         
         hour_field_start.value = new Date().getHours();
         minute_field_start.value = new Date().getMinutes();
@@ -1457,7 +1468,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             hour_field_end.value = detail.end_hour;
             minute_field_end.value = detail.end_minute;
         }
-
+        
         var fields = [
             block.add(hour_field_start),
             block.add(minute_field_start),
@@ -1467,6 +1478,19 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         block.add({xtype: 'container', flex: 1 });
         block.add(total_field);
+        
+        block.add({
+            xtype:'rallybutton',
+            itemId: 'remove_block_button',
+            cls: 'no-border',
+            text: '<span class="icon-cancel"> </span>',
+            listeners: {
+                scope: this,
+                click: function(button) {
+                    this._removeTimeBlock(block, fields);
+                }
+            }
+        });
         
         Ext.Array.each(fields, function(field){
             field.on('change',function() { this._setValidBlockValues(block); }, this);
@@ -1548,6 +1572,10 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         var disabled = false;
         Ext.Array.each(this.timeBlocks, function(block){
+            if ( ! block.down("#block_total") ) {
+                return;
+            }
+            
             var total = block.down('#block_total').getValue() || 0;
 
             if ( total <= 0 ) {
@@ -1562,8 +1590,10 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         var total = 0;
        
         Ext.Array.each(this.timeBlocks, function(block){
-            var value = block.down('#block_total').getValue() || 0;
-            total += value;
+            if ( !Ext.isEmpty(block) ) {
+                var value = ( block.down('#block_total') && block.down('#block_total').getValue()) || 0;
+                total += value;
+            }
         });
         
         var adjustment_box = this.down('#adjustment_box');
@@ -2315,6 +2345,26 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         }
 
         block_set[day] = blocks;
+                
+        this.set('_DetailBlocks', block_set); 
+        this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
+    },
+    
+    removeTimeBlock: function(day, block_id){
+        var block_set = this.get('_DetailBlocks');
+        if ( Ext.isEmpty(block_set) && ! Ext.isEmpty(this.get('DetailPreference')) ){
+            block_set = Ext.JSON.decode(this.get('DetailPreference').get('Value'));
+            this.set('_DetailBlocks', block_set);
+        }
+        
+        var blocks = this.getTimeBlocks(day);
+        
+        var new_blocks = Ext.Array.filter(blocks, function(block){
+            console.log('comparing', block_id, block.id);
+            return ( block_id != block.id );
+        });
+        
+        block_set[day] = new_blocks;
                 
         this.set('_DetailBlocks', block_set); 
         this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
@@ -3705,6 +3755,18 @@ Ext.define("TSTimesheet", {
     border-color: white !important;
     text-decoration: none;
 }
+.no-border {
+    border-style: none;
+    color: red !important;
+    background-color: white !important ;
+}
+
+.no-border .x-btn-inner {
+    color: red !important;
+    background-color: white !important ;
+}
+
+
 td.ts-total-cell {
     background-color: #eee !important;
 }
