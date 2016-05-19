@@ -225,6 +225,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
 Ext.define('CA.techservices.timesheet.TimeRow',{
     extend: 'Ext.data.Model',
 
+    createTEVProcess: {},
+    
     fields: [
         { name: '__SecretKey', type:'string' },
         { name: 'Pinned', type: 'boolean', defaultValue: false },
@@ -554,11 +556,19 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         });
         
         if ( Ext.isEmpty(time_entry_item) ) {
-            console.log('Could not find time entry item for date', value_date, this.get('TimeEntryItemRecords'));
+            console.log('No Time Entry Item');
+            
             this._createTimeEntryItem(value_date, this.get('Project'), this.get('WorkProduct'), this.get('Task') ).then({
                 scope: this,
                 success: function(result) {
-                    return this._createTimeEntryValueWithModel(day_name, value, value_date, result);
+                    console.log('Created Time Entry Item');
+                    if ( this.createTEVProcess[day_name] && this.createTEVProcess[day_name].getState() === 'pending' ) {
+                        console.log('Save is already in process');
+                        deferred.resolve();
+                    } else {
+                        this.createTEVProcess[day_name] = this._createTimeEntryValueWithModel(day_name, value, value_date, result);
+                        return this.createTEVProcess[day_name];
+                    }
                 },
                 failure: function(msg) {
                     console.log("Problem creating new TEI", msg);
@@ -568,10 +578,18 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             return deferred.promise;
         }
         
-        return this._createTimeEntryValueWithModel(day_name, value, value_date, time_entry_item);
+        if ( this.createTEVProcess[day_name] && this.createTEVProcess[day_name].getState() === 'pending' ) {
+            console.log('Save is already in process');
+            return;
+        } else {
+            this.createTEVProcess[day_name] = this._createTimeEntryValueWithModel(day_name, value, value_date, time_entry_item);
+            return this.createTEVProcess[day_name];            
+        }
     },
     
     _createTimeEntryItem: function(value_date, project, workproduct, task) {
+        Rally.getApp().setLoading('Creating Time Entry Item...');
+
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         
@@ -601,6 +619,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                         var records = me.get('TimeEntryItemRecords') || [];
                         records.push(result);
                         me.set('TimeEntryItemRecords', records);
+                        Rally.getApp().setLoading(false);
                         deferred.resolve(result);
                     }
                 });
@@ -612,6 +631,8 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
     _createTimeEntryValueWithModel: function(day_name, value, value_date, time_entry_item) {
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
+        
+        console.log("Creating Time Entry Value", day_name, value, value_date, time_entry_item);
         
         Rally.data.ModelFactory.getModel({
             type: 'TimeEntryValue',
@@ -638,8 +659,8 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                             deferred.resolve(result);    
                         } else {
                             me.set(day_name, 0);
-                            console.log('Operation:',operation);
-                            throw 'Problem saving time entry value';
+                            console.log('Problem saving Time Entry Value:',day_name, operation);
+                            //throw 'Problem saving time entry value';
                             deferred.reject(operation.error && operation.error.errors.join('.'));
                         }
                     }
@@ -739,7 +760,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var blocks = this.getTimeBlocks(day);
         
         var new_blocks = Ext.Array.filter(blocks, function(block){
-            console.log('comparing', block_id, block.id);
             return ( block_id != block.id );
         });
         

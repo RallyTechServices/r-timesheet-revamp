@@ -80,7 +80,6 @@ Ext.define('CA.techservices.TimeTable', {
                 var time_detail_prefs = results[2];
                 this.time_entry_defaults = results[3];
                 
-                this.logger.log('table with defaults', this.time_entry_defaults);
                 this.rows = this._createRows(time_entry_items, time_entry_values,time_detail_prefs);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
@@ -115,7 +114,7 @@ Ext.define('CA.techservices.TimeTable', {
     
     _makeGrid: function(rows) {
         this.removeAll();
-        console.log('rows: ', rows);
+
         var me = this,
             table_store = Ext.create('Rally.data.custom.Store',{
                 groupField: '__SecretKey',
@@ -124,7 +123,6 @@ Ext.define('CA.techservices.TimeTable', {
                 pageSize: 100
             });
             
-        console.log('store:', table_store);
         
         this.grid = this.add({ 
             xtype:'rallygrid', 
@@ -142,13 +140,11 @@ Ext.define('CA.techservices.TimeTable', {
             viewConfig: {
                 listeners: {
                     itemupdate: function(row, row_index) {
-                        me.logger.log('itemupdate', row);
+                        //me.logger.log('itemupdate', row);
                     }
                 }
             }
         });
-
-        console.log('grid:', this.grid);
         
         this.fireEvent('gridReady', this, this.grid);
     },
@@ -193,7 +189,6 @@ Ext.define('CA.techservices.TimeTable', {
             }
         ];
                 
-        me.logger.log(me,me.showEditTimeDetailsMenuItem);
         if ( me.showEditTimeDetailsMenuItem ) { 
             actions.push({
                 xtype: 'rallyrecordmenuitem',
@@ -305,7 +300,6 @@ Ext.define('CA.techservices.TimeTable', {
                                    return;
                                 }
                                 
-                                //console.log('saving state', new_value);
                                 record.set('State', new_value);
                                 record.save();
                             }
@@ -531,7 +525,6 @@ Ext.define('CA.techservices.TimeTable', {
         // in Rally, a time row has to start on Sunday, so we'll have up to two
         // time entry items for every row if the week starts on a different day
         var time_entry_item_sets = this._getTimeEntryItemSets(time_entry_items);
-        console.log('--', time_detail_prefs);
         
         Ext.Array.each(time_entry_item_sets, function(item_set){
             var item_values = [];
@@ -571,7 +564,6 @@ Ext.define('CA.techservices.TimeTable', {
             rows.push(row);
         });
         
-        console.log('--');
         return rows;
     },
     
