@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu May 19 2016 13:30:58 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu May 19 2016 14:06:09 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu May 19 2016 13:30:58 GMT-0700 (PDT)";
-        var CHECKSUM = 264265998806;
+        var APP_BUILD_DATE = "Thu May 19 2016 14:06:09 GMT-0700 (PDT)";
+        var CHECKSUM = 263579746762;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1498,12 +1498,6 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         end_store.addFilter({property:'value',operator:'>=',value:start_hour});
         
         if ( Ext.isEmpty(end_hour) ) { return; }
-        
-        if ( start_hour == end_hour ) {
-            if ( start_minute > end_minute ) { 
-                block.down('#end_minute').setValue(null);
-            }
-        }
         
         if ( start_hour > end_hour ) {
             block.down('#end_hour').setValue('');

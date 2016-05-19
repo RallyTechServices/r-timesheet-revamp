@@ -427,12 +427,6 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         if ( Ext.isEmpty(end_hour) ) { return; }
         
-        if ( start_hour == end_hour ) {
-            if ( start_minute > end_minute ) { 
-                block.down('#end_minute').setValue(null);
-            }
-        }
-        
         if ( start_hour > end_hour ) {
             block.down('#end_hour').setValue('');
         }
