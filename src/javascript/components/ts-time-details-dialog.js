@@ -504,14 +504,14 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     },
     
     _recalculateTotal: function() {        
-        var total = this._getTotal();
+        var total = Ext.util.Format.number(this._getTotal(),'#.##');
         console.log('_recalculateTotal', CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay], total);
         
         var day = CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay];
         
         this.day_boxes[day].update({day: day, value: total});
         
-        this.row.set(day, total);
+        this.row.set(day, parseFloat(total,10));
         this.row.save();
     }
 });

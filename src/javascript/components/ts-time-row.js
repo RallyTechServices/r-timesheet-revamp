@@ -23,7 +23,7 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
             start_date
         );
     },
-                    
+
     getDayOfWeek: function(value, record) {
         var week_start_date =  record.get('WeekStartDate');
         if ( Ext.isEmpty( week_start_date ) ) {
@@ -95,10 +95,10 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         var total = 0;
         Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
             var hours = record.get(day) || 0;
-            total = total + hours;
+            total = ( 100 * hours ) + total;
         });
         
-        return total;
+        return Math.round( total ) / 100;
     },
     
     getOrderedDaysBasedOnWeekStart: function(week_start_day) {

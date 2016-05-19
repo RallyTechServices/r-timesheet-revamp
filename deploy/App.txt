@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu May 19 2016 14:06:09 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu May 19 2016 14:20:08 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu May 19 2016 14:06:09 GMT-0700 (PDT)";
-        var CHECKSUM = 263579746762;
+        var APP_BUILD_DATE = "Thu May 19 2016 14:20:08 GMT-0700 (PDT)";
+        var CHECKSUM = 264025167373;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1576,14 +1576,14 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     },
     
     _recalculateTotal: function() {        
-        var total = this._getTotal();
+        var total = Ext.util.Format.number(this._getTotal(),'#.##');
         console.log('_recalculateTotal', CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay], total);
         
         var day = CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay];
         
         this.day_boxes[day].update({day: day, value: total});
         
-        this.row.set(day, total);
+        this.row.set(day, parseFloat(total,10));
         this.row.save();
     }
 });
@@ -1614,7 +1614,7 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
             start_date
         );
     },
-                    
+
     getDayOfWeek: function(value, record) {
         var week_start_date =  record.get('WeekStartDate');
         if ( Ext.isEmpty( week_start_date ) ) {
@@ -1686,10 +1686,10 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         var total = 0;
         Ext.Array.each(CA.techservices.timesheet.TimeRowUtils.daysInOrder, function(day) {
             var hours = record.get(day) || 0;
-            total = total + hours;
+            total = ( 100 * hours ) + total;
         });
         
-        return total;
+        return Math.round( total ) / 100;
     },
     
     getOrderedDaysBasedOnWeekStart: function(week_start_day) {
