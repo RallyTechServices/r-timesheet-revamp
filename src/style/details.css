@@ -1,0 +1,11 @@
+.no-border {
+    border-style: none;
+    color: red !important;
+    background-color: white !important ;
+}
+
+.no-border .x-btn-inner {
+    color: red !important;
+    background-color: white !important ;
+}
+

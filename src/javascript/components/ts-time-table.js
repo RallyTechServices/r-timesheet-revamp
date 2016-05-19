@@ -135,13 +135,9 @@ Ext.define('CA.techservices.TimeTable', {
             disableSelection: true,
             enableColumnMove: false,
             enableColumnResize : false,
-//            features: [{
-//                ftype: 'summary',
-//                startCollapsed: false,
-//                hideGroupedHeader: true,
-//                groupHeaderTpl: ' ',
-//                enableGroupingMenu: false
-//            }],
+            features: [{
+                ftype: 'summary'
+            }],
             
             viewConfig: {
                 listeners: {

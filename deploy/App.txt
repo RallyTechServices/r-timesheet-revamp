@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu May 19 2016 15:18:51 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu May 19 2016 15:24:38 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu May 19 2016 15:18:51 GMT-0700 (PDT)";
-        var CHECKSUM = 273229463161;
+        var APP_BUILD_DATE = "Thu May 19 2016 15:24:38 GMT-0700 (PDT)";
+        var CHECKSUM = 272527010219;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2532,13 +2532,9 @@ Ext.define('CA.techservices.TimeTable', {
             disableSelection: true,
             enableColumnMove: false,
             enableColumnResize : false,
-//            features: [{
-//                ftype: 'summary',
-//                startCollapsed: false,
-//                hideGroupedHeader: true,
-//                groupHeaderTpl: ' ',
-//                enableGroupingMenu: false
-//            }],
+            features: [{
+                ftype: 'summary'
+            }],
             
             viewConfig: {
                 listeners: {
