@@ -75,3 +75,12 @@ Ext.define('mockTimeEntryValue',{
     ]
 });
 
+Ext.define('mockTimeDetailPreference', {
+    extend: 'Ext.data.Model',
+    fields: [
+        {name:'ObjectID', type: 'int', defaultValue: 85},
+        {name:'Name', type:'string', defaultValue: Rally.util.DateTime.toIsoString(new Date())},
+        {name:'Value',type:'string' }
+    ]
+});
+

@@ -477,6 +477,7 @@ Ext.define("TSTimesheet", {
             listeners: {
                 scope: this,
                 gridReady: function() {
+                    this.logger.log('-- grid ready -- ');
                     this._addButtons(this.down('#button_box'));
                 }
             }

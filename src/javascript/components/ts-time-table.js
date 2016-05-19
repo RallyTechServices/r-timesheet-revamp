@@ -70,16 +70,18 @@ Ext.define('CA.techservices.TimeTable', {
         Deft.Chain.sequence([
             this._loadTimeEntryItems,
             this._loadTimeEntryValues,
+            this._loadTimeDetailPreferences,
             this._loadDefaultSettings
         ],this).then({
             scope: this,
             success: function(results) {
                 var time_entry_items  = results[0];
                 var time_entry_values = results[1];
-                this.time_entry_defaults = results[2];
+                var time_detail_prefs = results[2];
+                this.time_entry_defaults = results[3];
                 
                 this.logger.log('table with defaults', this.time_entry_defaults);
-                this.rows = this._createRows(time_entry_items, time_entry_values);
+                this.rows = this._createRows(time_entry_items, time_entry_values,time_detail_prefs);
                 this._makeGrid(this.rows);
                 this.setLoading(false);
             },
@@ -113,6 +115,7 @@ Ext.define('CA.techservices.TimeTable', {
     
     _makeGrid: function(rows) {
         this.removeAll();
+        console.log('rows: ', rows);
         var me = this,
             table_store = Ext.create('Rally.data.custom.Store',{
                 groupField: '__SecretKey',
@@ -121,6 +124,8 @@ Ext.define('CA.techservices.TimeTable', {
                 pageSize: 100
             });
             
+        console.log('store:', table_store);
+        
         this.grid = this.add({ 
             xtype:'rallygrid', 
             store: table_store,
@@ -130,14 +135,14 @@ Ext.define('CA.techservices.TimeTable', {
             disableSelection: true,
             enableColumnMove: false,
             enableColumnResize : false,
-            features: [{
-                ftype: 'summary',
-                startCollapsed: false,
-                hideGroupedHeader: true,
-                groupHeaderTpl: ' ',
-                enableGroupingMenu: false
-            }],
-
+//            features: [{
+//                ftype: 'summary',
+//                startCollapsed: false,
+//                hideGroupedHeader: true,
+//                groupHeaderTpl: ' ',
+//                enableGroupingMenu: false
+//            }],
+            
             viewConfig: {
                 listeners: {
                     itemupdate: function(row, row_index) {
@@ -146,6 +151,8 @@ Ext.define('CA.techservices.TimeTable', {
                 }
             }
         });
+
+        console.log('grid:', this.grid);
         
         this.fireEvent('gridReady', this, this.grid);
     },
@@ -521,13 +528,14 @@ Ext.define('CA.techservices.TimeTable', {
         return Ext.Object.getValues(time_entry_item_sets);
     },
     
-    _createRows: function(time_entry_items, time_entry_values) {
+    _createRows: function(time_entry_items, time_entry_values, time_detail_prefs) {
         var rows = [],
             me = this;
         
         // in Rally, a time row has to start on Sunday, so we'll have up to two
         // time entry items for every row if the week starts on a different day
         var time_entry_item_sets = this._getTimeEntryItemSets(time_entry_items);
+        console.log('--', time_detail_prefs);
         
         Ext.Array.each(time_entry_item_sets, function(item_set){
             var item_values = [];
@@ -541,19 +549,33 @@ Ext.define('CA.techservices.TimeTable', {
                 item_values = Ext.Array.push(item_values, values_for_time_entry_item);
             });
             
-            var row = Ext.create('CA.techservices.timesheet.TimeRow',{
+            var item_oid = CA.techservices.timesheet.TimeRowUtils.getItemOIDFromTimeEntryItem(item_set[0]);
+            var detail_preference = null;
+            Ext.Array.each(time_detail_prefs, function(pref) {
+                var name_array = pref.get('Name').split('.');
+                if ( "" + item_oid == name_array[name_array.length-1] ) {
+                    detail_preference = pref;
+                }
+            });
+            
+            var config = {
                 WeekStartDate: me.startDate,
                 TimeEntryItemRecords: item_set,
                 TimeEntryValueRecords: item_values
-            });
+            };
             
-            var item_oid = me._getItemOIDFromRow(row);
-            if ( me.time_entry_defaults[item_oid] && me.time_entry_defaults[item_oid] !== false ) {
-                row.set('Pinned',true);
+            if ( !Ext.isEmpty(detail_preference) ) {
+                config.DetailPreference = detail_preference;
             }
+            if ( me.time_entry_defaults[item_oid] && me.time_entry_defaults[item_oid] !== false ) {
+                config.Pinned = true;
+            }
+
+            var row = Ext.create('CA.techservices.timesheet.TimeRow',config);
             rows.push(row);
         });
         
+        console.log('--');
         return rows;
     },
     
@@ -696,5 +718,19 @@ Ext.define('CA.techservices.TimeTable', {
         };
         
         return TSUtilities.loadWsapiRecords(config);        
+    },
+    
+    _loadTimeDetailPreferences: function() {
+        this.setLoading('Loading time entry details...');
+        
+        var filters = [{property:'Name',operator:'contains',value:CA.techservices.timesheet.TimeRowUtils.getDetailPrefix(this.startDate)}];
+        
+        var config = {
+            model: 'Preference',
+            fetch: ['Name','Value'],
+            filters: filters
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);
     }
 });

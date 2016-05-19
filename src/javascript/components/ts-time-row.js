@@ -12,6 +12,18 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         return jsdate.getDay();
     },
     
+    detailKeyPrefix: 'ca.technicalservices.timesheet.details',
+    
+    getDetailPrefix: function(start_date){
+        if ( Ext.isDate(start_date) ) {
+            start_date = Rally.util.DateTime.toIsoString(start_date).replace(/T.*$/,'');
+        }
+        return Ext.String.format("{0}.{1}",
+            CA.techservices.timesheet.TimeRowUtils.detailKeyPrefix,
+            start_date
+        );
+    },
+                    
     getDayOfWeek: function(value, record) {
         var week_start_date =  record.get('WeekStartDate');
         if ( Ext.isEmpty( week_start_date ) ) {
@@ -105,7 +117,109 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
         var index = Ext.Array.indexOf(days_in_order, day_name);
         
         return Rally.util.DateTime.add(week_start_date,'day',index);
+    },
+    
+    getBlocksFromDetailPreference: function(value,record){
+        if ( !Ext.isEmpty(value) ) { return value; }
+        
+        var pref = record.get('DetailPreference');
+        if ( Ext.isEmpty(pref) ) { return {}; }
+        
+        var pref_value = pref.get('Value');
+        
+        if ( Ext.isEmpty(pref_value) ) { return {}; }
+        if ( !/{/.test(pref_value) ) { return {}; }
+        
+        return Ext.JSON.decode(pref_value);
+    },
+
+    getItemOIDFromTimeEntryItem: function(record) {
+        var item_oid = -1;
+        var workproduct = record.get('WorkProduct');
+        var task = record.get('Task');
+        
+        if ( !Ext.isEmpty(workproduct) ) {
+            item_oid = workproduct.ObjectID;
+        }
+        
+        if ( !Ext.isEmpty(task) ) {
+            item_oid = task.ObjectID;
+        }
+
+        
+        return item_oid;
+    },
+    
+    getDetailPreference: function(record) {
+        
+        return Deft.Chain.sequence([
+            function() {
+                var deferred = Ext.create('Deft.Deferred');
+                if ( !Ext.isEmpty(record.get('DetailPreference')) ) {
+                    return [ record.get('DetailPreference') ];
+                }
+                
+                    
+                var oid = record.get('TaskOID');
+                if ( oid < 0 ) {
+                    oid = record.get('WorkProductOID');
+                }
+                var key_start = CA.techservices.timesheet.TimeRowUtils.getDetailPrefix(record.get('WeekStartDate'));
+                
+                var key = Ext.String.format("{0}.{1}",
+                    key_start,
+                    oid
+                );
+                                
+                Rally.data.ModelFactory.getModel({
+                    type: 'Preference',
+                    success: function(model) {
+                        var record = Ext.create(model, {
+                            Name: key,
+                            Value: "{}",
+                            User: Rally.getApp().getContext().getUser()._ref
+                        });
+                        
+                        record.save({
+                            callback: function(preference, operation) {
+                                if(operation.wasSuccessful()) {
+                                    record.get('DetailPreference', preference);
+                                    deferred.resolve(preference);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                return deferred.promise;
+            }
+        ]);
+    },
+    
+    loadWsapiRecords: function(config,returnOperation){
+        var deferred = Ext.create('Deft.Deferred');
+        var me = this;
+        
+        var default_config = {
+            model: 'Preference',
+            fetch: ['ObjectID']
+        };
+        Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
+            callback : function(records, operation, successful) {
+                if (successful){
+                    if ( returnOperation ) {
+                        deferred.resolve(operation);
+                    } else {
+                        deferred.resolve(records);
+                    }
+                } else {
+                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+                }
+            }
+        });
+        return deferred.promise;
     }
+    
 });
 
 Ext.define('CA.techservices.timesheet.TimeRow',{
@@ -184,7 +298,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         
         //
         { name: 'Sunday', type:'number', persist: true, 
-            
             convert: function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getDayValueFromTimeEntryValues(value, record, 'Sunday');
             }
@@ -223,6 +336,15 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getTotalFromDayValues(value, record);
             }
+        },
+        {
+            name: 'DetailPreference', type:'object', defaultValue: null
+        },
+        {
+            name: '_DetailBlocks', type:'object', 
+            convert:  function(value,record){
+                return CA.techservices.timesheet.TimeRowUtils.getBlocksFromDetailPreference(value, record);
+            }
         }
     ],
     
@@ -258,6 +380,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             
             if ( field == "State" ) {
                 promises.push(function() { return me._changeStateValue(value); });
+            }
+            
+            if ( field == "_DetailBlocks" ) {
+                promises.push(function() { return me._changeDetailPreference(value); });
             }
         });
         
@@ -358,7 +484,6 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         Deft.Chain.sequence(promises).then({
             scope: this,
             success: function(results) {
-                console.log('setting total');
                 this.set('TimeEntryValueRecords',[]);
                 this.set('Total', 0);
                 
@@ -550,6 +675,79 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         });
         
         return model;
+    },
+    
+    _changeDetailPreference: function(value) {
+        var me = this;
+        var json_value = Ext.JSON.encode(value);
+        
+        if ( this.process && this.process.getState() === 'pending') {
+            return;
+        }
+        
+        this.process = Deft.Chain.sequence([
+            function() { 
+                return CA.techservices.timesheet.TimeRowUtils.getDetailPreference(me);
+            }
+        ],this).then({
+            success: function(preferences){
+                preferences = Ext.Array.flatten(preferences);
+                if ( preferences.length === 0 ) {
+                   return;
+                }
+                var preference = preferences[0];
+                
+                preference.set('Value', json_value);
+                preference.save();
+            },
+            failure: function(msg){
+                Ext.Msg.alert("Problem saving detail", msg);
+            }
+        });
+    },
+    
+    addTimeBlock: function(day, time_object){
+        var block_set = this.get('_DetailBlocks');
+        if ( Ext.isEmpty(block_set) && ! Ext.isEmpty(this.get('DetailPreference')) ){
+            block_set = Ext.JSON.decode(this.get('DetailPreference').get('Value'));
+            this.set('_DetailBlocks', block_set);
+        }
+        
+        var blocks = this.getTimeBlocks(day);
+        
+        var block = this.getTimeBlock(day,time_object.id);
+        if ( Ext.isEmpty(block) ) {
+            blocks.push(time_object);
+            //block_set[day] = blocks;
+        } else {   
+            Ext.Object.merge(block, time_object);
+        }
+
+        block_set[day] = blocks;
+                
+        this.set('_DetailBlocks', block_set); 
+        this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
+    },
+    
+    getTimeBlock: function(day, id) {
+        var blocks = this.getTimeBlocks(day);
+        var block = null;
+        Ext.Array.each(blocks, function(b){
+            if ( b.id == id ) {
+                block = b;
+            }
+        });
+        
+        return block;
+    },
+    
+    getTimeBlocks: function(day) {
+        var blocks = this.get('_DetailBlocks');
+        
+        if ( blocks && blocks[day] ) {
+            return blocks[day];
+        }
+        return [];
     },
     
     isPinned: function() {

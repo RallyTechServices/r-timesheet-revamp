@@ -5,8 +5,8 @@ describe("Time Row Creation By Value Tests", function() {
         
         expect(row.get('WeekStart')).toEqual(0);
         expect(row.get('Project')).toEqual(null);
-        expect(row.get('Task')).toEqual(null);
-        expect(row.get('WorkProduct')).toEqual(null);
+        expect(row.get('Task')).toEqual('');
+        expect(row.get('WorkProduct')).toEqual('');
         expect(row.get('User')).toEqual(null);
         expect(row.get('TimeEntryItemRecords')).toEqual([]);
         expect(row.get('TimeEntryValueRecords')).toEqual([]);

@@ -58,6 +58,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         this.currentDay = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(new Date());
         
         this._buildDays();
+        
         this._buildForm();
     },
     
@@ -70,6 +71,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         Ext.Array.each(days, function(day){
             me.day_boxes[day] = container.add({
+                item_id: 'day_box_' + day,
                 xtype:'container',
                 margin: 10,
                 tpl: '<span class="day_name">{day}</span>: <span class="day_value">{value}</day>'
@@ -168,27 +170,40 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     },
     
     _updateDetailsPanel: function() {
-        var me = this;
-        var container = this.down('#detailsPanel');
+        var me = this,
+            container = this.down('#detailsPanel');
         container.removeAll();
         
+        var today_details = this.row.getTimeBlocks(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay]);
+        console.log('--details:', today_details, this.row);
+
         container.add({
             xtype:'container',
             itemId: 'time_block_container',
             flex: 1,
             layout: 'vbox'
         });
-        
+                
+        this.timeBlocks = [];
+
+        if ( !Ext.isEmpty(today_details)) {
+            Ext.Array.each(today_details, function(detail){
+                console.log('detail:', detail);
+                this._addTimeBlock(detail);
+            },this);
+        }
+
         var current_total = this._getHoursForDay(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay]);
-        var time_blocks = []; // an array of { start: time, stop: time, total: #}
         
-        var adjustment = current_total;
-        Ext.Array.each(time_blocks, function(time_block){
-            var block_hours = time_block.total || 0;
-            adjustment = adjustment - block_hours;
-        });
+        console.log('current total:', current_total);
+        
+        var adjustment = current_total - this._getTotal();
+        if ( adjustment < 0 ) {
+            adjustment = 0;
+        }
         
         this._addDailyAdjustmentBox(container, adjustment);
+        this._enableDisableAddButton();
     },
     
     _addAddButton: function(container){
@@ -208,7 +223,9 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             text: '+',
             listeners: {
                 scope: this,
-                click: this._addTimeBlock
+                click: function(button) {
+                    this._addTimeBlock();
+                }
             }
         });
     },
@@ -223,23 +240,31 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         
         adjustment_container.add({xtype:'container',flex: 1});
         
-        adjustment_container.add({
+        var field = adjustment_container.add({
+            itemId: 'adjustment_box',
             xtype:'rallynumberfield',
             value: adjustment,
             labelWidth: 75,
-            width: 125,
+            width: 130,
             fieldLabel: 'Adjustment:',
             maxValue: 24,
             minValue: 0
         });
+        
+        field.on('change',this._recalculateTotal, this);
+        
     },
     
-    _addTimeBlock: function() {
+    _addTimeBlock: function(detail) {
         var container = this.down('#time_block_container');
-                
+        
+        var item_id = new Date().getTime();
+        if ( !Ext.isEmpty(detail) ) { item_id = detail.id; }
+        
         var block = container.add({
             xtype: 'container',
             layout: 'hbox',
+            itemId: item_id,
             defaults: { margin: 3 }
         });
         
@@ -294,7 +319,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             labelWidth: 30,
             value: now.getHours()
         };
-
+        
         var minute_field_start = {
             xtype:'rallynumberfield',
             itemId: 'start_minute',
@@ -349,29 +374,46 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             labelWidth: 5
         };
 
+        console.log('--', detail);
+        
+        hour_field_start.value = new Date().getHours();
+        minute_field_start.value = new Date().getMinutes();
+        
+        if ( !Ext.isEmpty(detail) ) { 
+            hour_field_start.value = detail.start_hour;
+            minute_field_start.value = detail.start_minute;
+            hour_field_end.value = detail.end_hour;
+            minute_field_end.value = detail.end_minute;
+        }
+
         var fields = [
             block.add(hour_field_start),
             block.add(minute_field_start),
             block.add(hour_field_end),
             block.add(minute_field_end)
         ];
+        
         block.add({xtype: 'container', flex: 1 });
         block.add(total_field);
-
+        
         Ext.Array.each(fields, function(field){
             field.on('change',function() { this._setValidBlockValues(block); }, this);
+            field.on('change',function() { this._updateRow(block); }, this);
             field.on('change',function() { this._updateBlockTotal(block); }, this);
+            // only update row total after block changes (not when first launched)
+            field.on('change',this._recalculateTotal, this);
+            
         },this);
-
+        
         this.timeBlocks.push(block);
         
         this._setValidBlockValues(block);
+        this._updateRow(block);
         this._updateBlockTotal(block);
         
     },
     
     _setValidBlockValues: function(block) {
-        console.log('check values');
         var start_hour = block.down('#start_hour').getValue();
         var start_minute = block.down('#start_minute').getValue();
         var end_hour = block.down('#end_hour').getValue();
@@ -419,17 +461,64 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         this._enableDisableAddButton();
     },
     
+    _updateRow: function(block) {
+        
+        this.row.addTimeBlock(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay],{
+            id: block.getItemId(),
+            start_hour: block.down('#start_hour').getValue(),
+            start_minute: block.down('#start_minute').getValue(),
+            end_hour: block.down('#end_hour').getValue(),
+            end_minute: block.down('#end_minute').getValue()
+        });
+        
+        this.row.save();
+        
+    },
+    
     _enableDisableAddButton: function() {
-        console.log('_enableDisableAddButton', this.timeBlocks);
+        if ( !this.down('#add_block_button') ) {
+            return;
+        }
+        
         var disabled = false;
         Ext.Array.each(this.timeBlocks, function(block){
             var total = block.down('#block_total').getValue() || 0;
+
             if ( total <= 0 ) {
                 disabled = true;
             }
         });
         
         this.down('#add_block_button').setDisabled(disabled);
+    },
+    
+    _getTotal: function() {
+        var total = 0;
+       
+        Ext.Array.each(this.timeBlocks, function(block){
+            var value = block.down('#block_total').getValue() || 0;
+            total += value;
+        });
+        
+        var adjustment_box = this.down('#adjustment_box');
+        if ( !Ext.isEmpty(adjustment_box) ) {
+            var adjustment = adjustment_box.getValue() || 0;
+            total = total + adjustment;
+        }
+        
+        return total;
+    },
+    
+    _recalculateTotal: function() {        
+        var total = this._getTotal();
+        console.log('_recalculateTotal', CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay], total);
+        
+        var day = CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay];
+        
+        this.day_boxes[day].update({day: day, value: total});
+        
+        this.row.set(day, total);
+        this.row.save();
     }
 });
     
