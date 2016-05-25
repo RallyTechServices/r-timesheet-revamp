@@ -194,9 +194,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         }
 
         var current_total = this._getHoursForDay(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay]);
-        
-        console.log('current total:', current_total);
-        
+                
         var adjustment = current_total - this._getTotal();
         if ( adjustment < 0 ) {
             adjustment = 0;
@@ -480,7 +478,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     },
     
     _updateRow: function(block) {
-        
+        console.log('_updateRow',block);
         this.row.addTimeBlock(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay],{
             id: block.getItemId(),
             start_hour: block.down('#start_hour').getValue(),

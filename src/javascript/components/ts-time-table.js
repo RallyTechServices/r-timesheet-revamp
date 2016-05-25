@@ -216,6 +216,19 @@ Ext.define('CA.techservices.TimeTable', {
                     return me._getRowActions(record);
                 }
             },
+            { 
+                text: ' ',
+                width: 25,
+                dataIndex: '__SecretKey',
+                renderer: function(value,meta,record) {
+                    var icons = "";
+                    
+                    if ( record.hasOpenDetails() ) {
+                        icons = icons + "<span class='icon-calendar'></span>";
+                    }
+                    return icons;
+                }
+            },
             {
                 dataIndex: 'Project',
                 text: 'Project',
@@ -716,7 +729,10 @@ Ext.define('CA.techservices.TimeTable', {
         var config = {
             model: 'Preference',
             fetch: ['Name','Value'],
-            filters: filters
+            filters: filters,
+            context: {
+                project: null
+            }
         };
         
         return TSUtilities.loadWsapiRecords(config);

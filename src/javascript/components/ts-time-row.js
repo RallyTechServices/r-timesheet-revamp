@@ -177,7 +177,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
                         var record = Ext.create(model, {
                             Name: key,
                             Value: "{}",
-                            User: Rally.getApp().getContext().getUser()._ref
+                            User: Rally.getApp().getContext().getUser()._ref,
+                            Project: null
                         });
                         
                         record.save({
@@ -747,6 +748,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         block_set[day] = blocks;
                 
         this.set('_DetailBlocks', block_set); 
+        this.set('_SecretKey',new Date());
         this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
     },
     
@@ -766,6 +768,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         block_set[day] = new_blocks;
                 
         this.set('_DetailBlocks', block_set); 
+        this.set('_SecretKey',new Date());
         this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
     },
     
@@ -792,5 +795,20 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
     
     isPinned: function() {
         return this.get('Pinned') || false;
+    },
+    
+    hasOpenDetails: function() {
+        var has_open = false;
+        var blocks = this.get('_DetailBlocks');
+        
+        Ext.Object.each(blocks, function(day,day_blocks){
+            Ext.Array.each(day_blocks, function(block){
+                if ( Ext.isEmpty(block.end_hour) ) {
+                    has_open = true;
+                }
+            });
+        });
+        
+        return has_open;
     }
 });

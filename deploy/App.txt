@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed May 25 2016 15:06:04 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed May 25 2016 15:50:06 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed May 25 2016 15:06:04 GMT-0700 (PDT)";
-        var CHECKSUM = 274458148073;
+        var APP_BUILD_DATE = "Wed May 25 2016 15:50:06 GMT-0700 (PDT)";
+        var CHECKSUM = 278167267001;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1266,9 +1266,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         }
 
         var current_total = this._getHoursForDay(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay]);
-        
-        console.log('current total:', current_total);
-        
+                
         var adjustment = current_total - this._getTotal();
         if ( adjustment < 0 ) {
             adjustment = 0;
@@ -1552,7 +1550,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     },
     
     _updateRow: function(block) {
-        
+        console.log('_updateRow',block);
         this.row.addTimeBlock(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay],{
             id: block.getItemId(),
             start_hour: block.down('#start_hour').getValue(),
@@ -1798,7 +1796,8 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
                         var record = Ext.create(model, {
                             Name: key,
                             Value: "{}",
-                            User: Rally.getApp().getContext().getUser()._ref
+                            User: Rally.getApp().getContext().getUser()._ref,
+                            Project: null
                         });
                         
                         record.save({
@@ -2368,6 +2367,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         block_set[day] = blocks;
                 
         this.set('_DetailBlocks', block_set); 
+        this.set('_SecretKey',new Date());
         this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
     },
     
@@ -2387,6 +2387,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         block_set[day] = new_blocks;
                 
         this.set('_DetailBlocks', block_set); 
+        this.set('_SecretKey',new Date());
         this.setDirty();// TODO: why is set() not setting the record as dirty and the field as changed?
     },
     
@@ -2413,6 +2414,21 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
     
     isPinned: function() {
         return this.get('Pinned') || false;
+    },
+    
+    hasOpenDetails: function() {
+        var has_open = false;
+        var blocks = this.get('_DetailBlocks');
+        
+        Ext.Object.each(blocks, function(day,day_blocks){
+            Ext.Array.each(day_blocks, function(block){
+                if ( Ext.isEmpty(block.end_hour) ) {
+                    has_open = true;
+                }
+            });
+        });
+        
+        return has_open;
     }
 });
 Ext.override(Rally.ui.grid.plugin.Validation,{
@@ -2631,6 +2647,19 @@ Ext.define('CA.techservices.TimeTable', {
                 scope: me,
                 rowActionsFn: function (record) {
                     return me._getRowActions(record);
+                }
+            },
+            { 
+                text: ' ',
+                width: 25,
+                dataIndex: '__SecretKey',
+                renderer: function(value,meta,record) {
+                    var icons = "";
+                    
+                    if ( record.hasOpenDetails() ) {
+                        icons = icons + "<span class='icon-calendar'></span>";
+                    }
+                    return icons;
                 }
             },
             {
@@ -3133,7 +3162,10 @@ Ext.define('CA.techservices.TimeTable', {
         var config = {
             model: 'Preference',
             fetch: ['Name','Value'],
-            filters: filters
+            filters: filters,
+            context: {
+                project: null
+            }
         };
         
         return TSUtilities.loadWsapiRecords(config);
