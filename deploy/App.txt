@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu May 19 2016 16:11:26 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed May 25 2016 15:06:04 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu May 19 2016 16:11:26 GMT-0700 (PDT)";
-        var CHECKSUM = 274837820103;
+        var APP_BUILD_DATE = "Wed May 25 2016 15:06:04 GMT-0700 (PDT)";
+        var CHECKSUM = 274458148073;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1127,7 +1127,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     initComponent: function() {
         this.callParent(arguments);
         
-        this.currentDay = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(new Date());
+        this.currentDay = new Date().getDay();
         
         this._buildDays();
         

@@ -55,7 +55,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
     initComponent: function() {
         this.callParent(arguments);
         
-        this.currentDay = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(new Date());
+        this.currentDay = new Date().getDay();
         
         this._buildDays();
         
