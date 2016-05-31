@@ -135,7 +135,8 @@ Ext.define('CA.techservices.TimeTable', {
             enableColumnMove: false,
             enableColumnResize : false,
             features: [{
-                ftype: 'summary'
+                ftype: 'summary',
+                dock: 'top'
             }],
             
             viewConfig: {

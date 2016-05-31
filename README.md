@@ -1,5 +1,36 @@
 #TS Timesheet
 
+This is an alternative to time entry in Agile Central that provides several interesting features.  
+
+![timesheet](./images/timetable.png)
+
+* The timesheet can be set to have weeks that start on any day of the week.  Caution: time is still saved using
+traditional AC time entry items, so if a week starts on a day other than Sunday, it will need to create a time entry
+item for each possible week that has a time entry value.  This will mean that clearing the week will sometimes not remove
+the time entry item line -- it has to hold a spot for the previous week's data.
+
+* The timesheet allows a user to set one or more time entry items as default.  Then, when the Add My Tasks button is pushed, 
+all of the default items are added to the time table.  (Does not have to be a task to be pinned.)
+
+![timesheet](./images/timetable_menu.png)
+
+* Different kinds of searches for things to add to the timesheet:
+** Add My Tasks looks for tasks the user owns and are in an iteration that overlaps the chosen week.  (This is slightly different
+from the out-of-the-box button.)
+** + My (WorkProducts) looks for work products in a current iteration that the user either owns or owns a task for and just puts 
+the story on the timesheet.
+** + (Tasks) opens a search dialog to find tasks directly using several search criteria including name and release.
+** + (WorkProducts) opens a search dialog to find workproducts directly using several search criteria.
+
+* The app can be configured to show different columns for different users.
+
+![timesheet](./images/timetable_pick_columns.png)
+
+* The app can be configured to allow for the entry of time in AC in chunks of time during the day.
+
+![timesheet](./images/timetable_details_dialog.png)
+
+
 ## Development Notes
 
 * Shouldn't be able to remove a line if it doesn't start on monday and there is data from the week before (because we're faking a line when starting on a day other than Sunday to handle having two underlying Time Entry Items).

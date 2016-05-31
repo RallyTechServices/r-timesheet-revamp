@@ -292,7 +292,7 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
             {"display":"9 A", "value":9},
             {"display":"10A", "value":10},
             {"display":"11A", "value":11},
-            {"display":"12A", "value":12},
+            {"display":"12P", "value":12},
             {"display":"1 P", "value":13},
             {"display":"2 P", "value":14},
             {"display":"3 P", "value":15},
