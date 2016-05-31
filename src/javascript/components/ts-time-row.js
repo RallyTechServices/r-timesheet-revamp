@@ -252,6 +252,22 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return item.ObjectID || -1;
             }
         },
+        { name: 'TaskFID', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.FormattedID || -1;
+            }
+        },
+        { name: 'TaskName', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.Name || '';
+            }
+        },
         { name: 'User', type:'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'User');
@@ -270,6 +286,22 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 
                 if ( Ext.isEmpty(item) ) { return -1; }
                 return item.ObjectID || -1;
+            }
+        },
+        { name: 'WorkProductFID', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                
+                if ( Ext.isEmpty(item) ) { return '' }
+                return item.FormattedID || '';
+            }
+        },
+        { name: 'WorkProductName', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.Name || '';
             }
         },
         

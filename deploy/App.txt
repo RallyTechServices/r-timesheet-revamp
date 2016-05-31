@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed May 25 2016 15:50:06 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 31 2016 15:36:27 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed May 25 2016 15:50:06 GMT-0700 (PDT)";
-        var CHECKSUM = 278167267001;
+        var APP_BUILD_DATE = "Tue May 31 2016 15:36:27 GMT-0700 (PDT)";
+        var CHECKSUM = 331087806994;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1070,6 +1070,219 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
     }
 });
 
+Ext.define('CA.technicalservices.ColumnPickerDialog',{
+    extend: 'Rally.ui.dialog.Dialog',
+    alias: 'widget.tscolumnpickerdialog',
+    
+    width: 200,
+    closable: true,
+    
+    config: {
+        /**
+         * @cfg {String}
+         * Title to give to the dialog
+         */
+        title: 'Choose Columns',
+        /**
+         * @cfg {Boolean}
+         * Allow multiple selection or not
+         */
+        multiple: true,
+        /**
+         * 
+         * @cfg [{Ext.Column.column}]  columns that
+         * can be chosen.  hidden = false means chosen to 
+         * show.
+         *  
+         */
+        pickableColumns: [],
+        
+        selectionButtonText: 'Apply'
+        
+    },
+    
+    items: [{
+        xtype: 'panel',
+        border: false,
+        items: [{
+            xtype:'container', 
+            itemId:'grid_container',
+            layout: 'fit',
+            height: 325
+        }]
+    }],
+
+    constructor: function(config) {
+        this.mergeConfig(config);
+
+        this.callParent([this.config]);
+    },
+
+    initComponent: function() {
+        this.callParent(arguments);
+        this.addEvents(
+            /**
+             * @event columnsChosen
+             * Fires when user clicks done after choosing columns
+             * @param {CA.technicalservices.ColumnPickerDialog} this dialog
+             * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
+             */
+            'columnsChosen'
+        );
+        
+        this._buildButtons();
+        //this._buildSearchBar();
+        this._buildGrid();
+    },
+    
+    _buildButtons: function() {
+        this.down('panel').addDocked({
+            xtype: 'toolbar',
+            dock: 'bottom',
+            padding: '0 0 10 0',
+            layout: {
+                type: 'hbox',
+                pack: 'center'
+            },
+            ui: 'footer',
+            items: [
+                {
+                    xtype: 'rallybutton',
+                    text: this.selectionButtonText,
+                    cls: 'primary small',
+                    scope: this,
+                    userAction: 'clicked done in dialog',
+                    handler: function() {
+                        var selectedRecords = this.getRecordsWithSelection();
+                        this.fireEvent('columnsChosen', this, selectedRecords);
+                        this.close();
+                    }
+                },
+                {
+                    xtype: 'rallybutton',
+                    text: 'Cancel',
+                    cls: 'secondary small',
+                    handler: this.close,
+                    scope: this,
+                    ui: 'link'
+                }
+            ]
+        });
+    },
+    
+    _buildGrid: function() {
+        var mode = this.multiple ? 'MULTI' : 'SINGLE';
+        this.selectionModel = Ext.create('Rally.ui.selection.CheckboxModel', {
+            mode: mode,
+            allowDeselect: true
+        });
+        
+        var pickableColumns = this.pickableColumns;
+        
+        console.log('pickable columns', pickableColumns);
+        
+        var store = Ext.create('Rally.data.custom.Store',{
+            data: this.pickableColumns
+        });
+        
+        
+        this.grid = Ext.create('Rally.ui.grid.Grid', {
+            selModel: this.selectionModel,
+            enableColumnHide: false,
+            enableColumnMove: false,
+            columnCfgs: this._getGridColumns(),
+            showPagingToolbar: false,
+            store: store,
+            listeners: {
+                viewready: function(grid) {
+                    var selectionModel = grid.getSelectionModel();
+                    
+                    Ext.Array.each(pickableColumns, function(col, idx){
+                        if ( !col.hidden ) {
+                            selectionModel.select(grid.store.data.items[idx],true);
+                        }
+                    });
+                }
+            }
+        });
+        
+        this.down('#grid_container').add(this.grid);
+    },
+    
+    _getGridColumns: function() {
+        return [
+            { dataIndex: 'text', flex: 1 }
+        ];
+    },
+    
+    getRecordsWithSelection: function() {
+        var selected_items = this.grid.getSelectionModel().getSelection(); 
+        var selected_items_by_dataindex = {};
+        Ext.Array.each(selected_items, function(selected_item){
+            selected_items_by_dataindex[selected_item.get('text')] = selected_item.getData();
+        });
+        
+        Ext.Array.each(this.pickableColumns, function(pickableColumn){
+            pickableColumn.hidden = Ext.isEmpty(selected_items_by_dataindex[pickableColumn.text]);
+        });
+        
+        return this.pickableColumns;
+    }
+});
+Ext.define('CA.technicalservices.ColumnPickerButton',{
+    extend: 'Rally.ui.Button',
+    requires: [
+        'CA.technicalservices.ColumnPickerDialog'
+    ],
+    
+    alias: 'widget.tscolumnpickerbutton',
+    
+    config: {
+        pickableColumns: [],
+        text: '<span class="icon-add-column"> </span>',
+        cls: 'secondary'
+
+    },
+    
+    constructor:function (config) {
+        this.mergeConfig(config);
+
+        this.callParent([this.config]);
+    },
+    
+    initComponent: function() {
+        this.callParent(arguments);
+        this.addEvents(
+            /**
+             * @event columnsChosen
+             * Fires when user clicks done after choosing columns
+             * @param {CA.technicalservices.ColumnPickerButton} this button
+             * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
+             */
+            'columnsChosen'
+        );
+    },
+    
+    afterRender: function() {
+        this.callParent(arguments);
+        this.mon(this.el, this.clickEvent, this._showDialog, this);
+
+    },
+    
+    _showDialog: function() {
+        var me = this;
+        Ext.create('CA.technicalservices.ColumnPickerDialog',{
+            autoShow: true,
+            pickableColumns: this.pickableColumns,
+            listeners: {
+                scope: this,
+                columnsChosen: function(dialog, columns) {
+                    this.fireEvent('columnsChosen', me, columns);
+                }
+            }
+        });
+    }
+});
 Ext.define('CA.technicalservices.TimeDetailsDialog', {
     extend: 'Rally.ui.dialog.Dialog',
     alias:'widget.tstimedetailsdialog',
@@ -1871,6 +2084,22 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return item.ObjectID || -1;
             }
         },
+        { name: 'TaskFID', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.FormattedID || -1;
+            }
+        },
+        { name: 'TaskName', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task');
+                
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.Name || '';
+            }
+        },
         { name: 'User', type:'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'User');
@@ -1889,6 +2118,22 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 
                 if ( Ext.isEmpty(item) ) { return -1; }
                 return item.ObjectID || -1;
+            }
+        },
+        { name: 'WorkProductFID', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                
+                if ( Ext.isEmpty(item) ) { return '' }
+                return item.FormattedID || '';
+            }
+        },
+        { name: 'WorkProductName', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.Name || '';
             }
         },
         
@@ -2637,91 +2882,156 @@ Ext.define('CA.techservices.TimeTable', {
         
     },
     
-    _getColumns: function() {
-        var me = this;
+    setPickableColumns: function(pickable_columns) {
+        var columns = Ext.Array.merge([], this._getBaseLeftColumns());
         
-        var columns = [
-            {
-                xtype:'rallyrowactioncolumn',
-                sortable: false,
-                scope: me,
-                rowActionsFn: function (record) {
-                    return me._getRowActions(record);
+        columns = Ext.Array.merge(columns, pickable_columns);
+        
+        columns = Ext.Array.merge(columns, this._getBaseRightColumns());
+        
+        var store = this.getGrid().getStore();
+        this.getGrid().reconfigure(store, columns);
+    },
+    
+    _getColumns: function() {
+        var columns = Ext.Array.merge([], this._getBaseLeftColumns());
+        
+        columns = Ext.Array.merge(columns, this.getPickableColumns());
+        
+        columns = Ext.Array.merge(columns, this._getBaseRightColumns());
+
+        return columns;
+    },
+    
+    getPickableColumns: function() {
+        var columns = [],
+            me = this;
+        
+        columns.push({
+            dataIndex: 'Project',
+            text: 'Project',
+            flex: 1,
+            editor: null,
+            sortable: false,
+            hidden: false,
+            menuDisabled: true,
+            renderer: function(value, meta, record) {
+                if ( Ext.isEmpty(value) ) {
+                    return '--';
                 }
-            },
-            { 
-                text: ' ',
-                width: 25,
-                dataIndex: '__SecretKey',
-                renderer: function(value,meta,record) {
-                    var icons = "";
-                    
-                    if ( record.hasOpenDetails() ) {
-                        icons = icons + "<span class='icon-calendar'></span>";
-                    }
-                    return icons;
-                }
-            },
-            {
-                dataIndex: 'Project',
-                text: 'Project',
-                flex: 1,
-                editor: null,
-                sortable: false,
-                renderer: function(value, meta, record) {
-                    if ( Ext.isEmpty(value) ) {
-                        return '--';
-                    }
-                    return value._refObjectName;
-                }
-            },
-            {
-                dataIndex: 'WorkProductOID',
-                text: 'Work Item',
-                flex: 1,
-                editor: null,
-                sortable: true,
-                renderer: function(value, meta, record) {
-                    if ( value < 0 ) {
-                        return '--';
-                    }
-                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
-                        record.get('WorkProduct').FormattedID,
-                        record.get('WorkProduct').Name
-                    );;
-                }
-            },
-            {
-                dataIndex: 'Iteration',
-                text: 'Iteration',
-                editor: null,
-                sortable: false,
-                renderer: function(value,meta,record){
-                    if ( Ext.isEmpty(value) ){
-                        return "--";
-                    }
-                    return value._refObjectName;
-                }
-            },
-            {
-                dataIndex: 'TaskOID',
-                text: 'Task',
-                sortable: true,
-                flex: 1,
-                editor: null,
-                renderer: function(value, meta, record) {
-                    if ( value < 0 ) {
-                        return '--';
-                    }
-                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(record.get('Task')),
-                        record.get('Task').FormattedID,
-                        record.get('Task').Name
-                    );;
-                }
+                return value._refObjectName;
             }
-        ];
+        });
+        
+        columns.push({
+            dataIndex: 'WorkProductOID',
+            text: 'Work Item',
+            flex: 1,
+            editor: null,
+            sortable: true,
+            menuDisabled: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
+                    record.get('WorkProduct').FormattedID,
+                    record.get('WorkProduct').Name
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'WorkProductFID',
+            text: 'Work Item ID',
+            flex: 1,
+            editor: null,
+            hidden: true,
+            menuDisabled: true,
+            sortable: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                    Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
+                    record.get('WorkProduct').FormattedID
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'WorkProductName',
+            text: 'Work Item Name',
+            hidden: true,
+            flex: 1,
+            editor: null,
+            menuDisabled: true,
+            sortable: true
+        });
+        
+        columns.push({
+            dataIndex: 'Iteration',
+            text: 'Iteration',
+            editor: null,
+            sortable: false,
+            menuDisabled: true,
+            renderer: function(value,meta,record){
+                if ( Ext.isEmpty(value) ){
+                    return "--";
+                }
+                return value._refObjectName;
+            }
+        });
+            
+        columns.push({
+            dataIndex: 'TaskOID',
+            text: 'Task',
+            sortable: true,
+            flex: 1,
+            menuDisabled: true,
+            editor: null,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(record.get('Task')),
+                    record.get('Task').FormattedID,
+                    record.get('Task').Name
+                );;
+            }
+        });
+            
+        columns.push({
+            dataIndex: 'TaskFID',
+            text: 'Task ID',
+            sortable: true,
+            flex: 1,
+            hidden: true,
+            menuDisabled: true,
+            editor: null,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                    Rally.nav.Manager.getDetailUrl(record.get('Task')),
+                    record.get('Task').FormattedID
+                );;
+            }
+        });  
+        
+        columns.push({
+            dataIndex: 'TaskName',
+            text: 'Task Name',
+            sortable: true,
+            flex: 1,
+            hidden: true,
+            menuDisabled: true,
+            editor: null
+        }); 
         
         var state_config = {
             dataIndex: 'State',
@@ -2730,6 +3040,7 @@ Ext.define('CA.techservices.TimeTable', {
             align: 'center',
             field: 'test',
             sortable: true,
+            menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -2765,6 +3076,7 @@ Ext.define('CA.techservices.TimeTable', {
             align: 'center',
             field: 'test',
             sortable: true,
+            menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -2795,6 +3107,43 @@ Ext.define('CA.techservices.TimeTable', {
         };
         
         columns.push(todo_config);
+        
+        return columns;
+    },
+    
+    _getBaseLeftColumns: function() {
+        var me = this;
+        
+        var columns = [
+            {
+                xtype:'rallyrowactioncolumn',
+                sortable: false,
+                scope: me,
+                rowActionsFn: function (record) {
+                    return me._getRowActions(record);
+                }
+            },
+            { 
+                text: ' ',
+                width: 25,
+                dataIndex: '__SecretKey',
+                renderer: function(value,meta,record) {
+                    var icons = "";
+                    
+                    if ( record.hasOpenDetails() ) {
+                        icons = icons + "<span class='icon-calendar'></span>";
+                    }
+                    return icons;
+                }
+            }
+        ];
+        
+        return columns; 
+    },
+    
+    _getBaseRightColumns: function() {
+        var me = this;
+        var columns = [];
         
         Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day,idx) {
             columns.push(this._getColumnForDay(day,idx));
@@ -3202,10 +3551,12 @@ Ext.define("TSTimesheet", {
     
     _addSelectors: function(container) {
         container.removeAll();
-        container.add({xtype:'container',itemId:'button_box'});
+        container.add({xtype:'container',itemId:'add_button_box'});
         
         container.add({xtype:'container',flex: 1});
         
+        container.add({xtype:'container',itemId:'other_button_box'});
+
         var week_starts_on = this.getSetting('weekStartsOn');
         this.logger.log('Week Start:', week_starts_on);
         
@@ -3230,7 +3581,7 @@ Ext.define("TSTimesheet", {
         }).setValue(new Date());
     },
     
-    _addButtons: function(container) {
+    _addAddButtons: function(container) {
         container.removeAll();
         
         container.add({
@@ -3280,7 +3631,24 @@ Ext.define("TSTimesheet", {
                 click: this._findAndAddStory
             }
         });
-        
+    },
+    
+    _addConfigButtons: function(container) {
+        console.log(this.time_table.getPickableColumns());
+    
+        container.add({
+            xtype:'tscolumnpickerbutton',
+            pickableColumns: this.time_table.getPickableColumns(),
+            listeners: {
+                scope: this,
+                columnsChosen: function(button,columns) {
+                    var timetable = this.down('tstimetable');
+                    this.columns = columns;
+                    
+                    timetable.setPickableColumns(columns);
+                }
+            }
+        });
     },
     
     // my workproducts are stories I own and stories that have tasks I own
@@ -3651,7 +4019,8 @@ Ext.define("TSTimesheet", {
                 scope: this,
                 gridReady: function() {
                     this.logger.log('-- grid ready -- ');
-                    this._addButtons(this.down('#button_box'));
+                    this._addAddButtons(this.down('#add_button_box'));
+                    this._addConfigButtons(this.down('#other_button_box'));
                 }
             }
         });

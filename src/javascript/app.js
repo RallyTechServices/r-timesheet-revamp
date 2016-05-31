@@ -29,10 +29,12 @@ Ext.define("TSTimesheet", {
     
     _addSelectors: function(container) {
         container.removeAll();
-        container.add({xtype:'container',itemId:'button_box'});
+        container.add({xtype:'container',itemId:'add_button_box'});
         
         container.add({xtype:'container',flex: 1});
         
+        container.add({xtype:'container',itemId:'other_button_box'});
+
         var week_starts_on = this.getSetting('weekStartsOn');
         this.logger.log('Week Start:', week_starts_on);
         
@@ -57,7 +59,7 @@ Ext.define("TSTimesheet", {
         }).setValue(new Date());
     },
     
-    _addButtons: function(container) {
+    _addAddButtons: function(container) {
         container.removeAll();
         
         container.add({
@@ -107,7 +109,24 @@ Ext.define("TSTimesheet", {
                 click: this._findAndAddStory
             }
         });
-        
+    },
+    
+    _addConfigButtons: function(container) {
+        console.log(this.time_table.getPickableColumns());
+    
+        container.add({
+            xtype:'tscolumnpickerbutton',
+            pickableColumns: this.time_table.getPickableColumns(),
+            listeners: {
+                scope: this,
+                columnsChosen: function(button,columns) {
+                    var timetable = this.down('tstimetable');
+                    this.columns = columns;
+                    
+                    timetable.setPickableColumns(columns);
+                }
+            }
+        });
     },
     
     // my workproducts are stories I own and stories that have tasks I own
@@ -478,7 +497,8 @@ Ext.define("TSTimesheet", {
                 scope: this,
                 gridReady: function() {
                     this.logger.log('-- grid ready -- ');
-                    this._addButtons(this.down('#button_box'));
+                    this._addAddButtons(this.down('#add_button_box'));
+                    this._addConfigButtons(this.down('#other_button_box'));
                 }
             }
         });

@@ -204,91 +204,156 @@ Ext.define('CA.techservices.TimeTable', {
         
     },
     
-    _getColumns: function() {
-        var me = this;
+    setPickableColumns: function(pickable_columns) {
+        var columns = Ext.Array.merge([], this._getBaseLeftColumns());
         
-        var columns = [
-            {
-                xtype:'rallyrowactioncolumn',
-                sortable: false,
-                scope: me,
-                rowActionsFn: function (record) {
-                    return me._getRowActions(record);
+        columns = Ext.Array.merge(columns, pickable_columns);
+        
+        columns = Ext.Array.merge(columns, this._getBaseRightColumns());
+        
+        var store = this.getGrid().getStore();
+        this.getGrid().reconfigure(store, columns);
+    },
+    
+    _getColumns: function() {
+        var columns = Ext.Array.merge([], this._getBaseLeftColumns());
+        
+        columns = Ext.Array.merge(columns, this.getPickableColumns());
+        
+        columns = Ext.Array.merge(columns, this._getBaseRightColumns());
+
+        return columns;
+    },
+    
+    getPickableColumns: function() {
+        var columns = [],
+            me = this;
+        
+        columns.push({
+            dataIndex: 'Project',
+            text: 'Project',
+            flex: 1,
+            editor: null,
+            sortable: false,
+            hidden: false,
+            menuDisabled: true,
+            renderer: function(value, meta, record) {
+                if ( Ext.isEmpty(value) ) {
+                    return '--';
                 }
-            },
-            { 
-                text: ' ',
-                width: 25,
-                dataIndex: '__SecretKey',
-                renderer: function(value,meta,record) {
-                    var icons = "";
-                    
-                    if ( record.hasOpenDetails() ) {
-                        icons = icons + "<span class='icon-calendar'></span>";
-                    }
-                    return icons;
-                }
-            },
-            {
-                dataIndex: 'Project',
-                text: 'Project',
-                flex: 1,
-                editor: null,
-                sortable: false,
-                renderer: function(value, meta, record) {
-                    if ( Ext.isEmpty(value) ) {
-                        return '--';
-                    }
-                    return value._refObjectName;
-                }
-            },
-            {
-                dataIndex: 'WorkProductOID',
-                text: 'Work Item',
-                flex: 1,
-                editor: null,
-                sortable: true,
-                renderer: function(value, meta, record) {
-                    if ( value < 0 ) {
-                        return '--';
-                    }
-                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
-                        record.get('WorkProduct').FormattedID,
-                        record.get('WorkProduct').Name
-                    );;
-                }
-            },
-            {
-                dataIndex: 'Iteration',
-                text: 'Iteration',
-                editor: null,
-                sortable: false,
-                renderer: function(value,meta,record){
-                    if ( Ext.isEmpty(value) ){
-                        return "--";
-                    }
-                    return value._refObjectName;
-                }
-            },
-            {
-                dataIndex: 'TaskOID',
-                text: 'Task',
-                sortable: true,
-                flex: 1,
-                editor: null,
-                renderer: function(value, meta, record) {
-                    if ( value < 0 ) {
-                        return '--';
-                    }
-                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                        Rally.nav.Manager.getDetailUrl(record.get('Task')),
-                        record.get('Task').FormattedID,
-                        record.get('Task').Name
-                    );;
-                }
+                return value._refObjectName;
             }
-        ];
+        });
+        
+        columns.push({
+            dataIndex: 'WorkProductOID',
+            text: 'Work Item',
+            flex: 1,
+            editor: null,
+            sortable: true,
+            menuDisabled: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
+                    record.get('WorkProduct').FormattedID,
+                    record.get('WorkProduct').Name
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'WorkProductFID',
+            text: 'Work Item ID',
+            flex: 1,
+            editor: null,
+            hidden: true,
+            menuDisabled: true,
+            sortable: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                    Rally.nav.Manager.getDetailUrl(record.get('WorkProduct')),
+                    record.get('WorkProduct').FormattedID
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'WorkProductName',
+            text: 'Work Item Name',
+            hidden: true,
+            flex: 1,
+            editor: null,
+            menuDisabled: true,
+            sortable: true
+        });
+        
+        columns.push({
+            dataIndex: 'Iteration',
+            text: 'Iteration',
+            editor: null,
+            sortable: false,
+            menuDisabled: true,
+            renderer: function(value,meta,record){
+                if ( Ext.isEmpty(value) ){
+                    return "--";
+                }
+                return value._refObjectName;
+            }
+        });
+            
+        columns.push({
+            dataIndex: 'TaskOID',
+            text: 'Task',
+            sortable: true,
+            flex: 1,
+            menuDisabled: true,
+            editor: null,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(record.get('Task')),
+                    record.get('Task').FormattedID,
+                    record.get('Task').Name
+                );;
+            }
+        });
+            
+        columns.push({
+            dataIndex: 'TaskFID',
+            text: 'Task ID',
+            sortable: true,
+            flex: 1,
+            hidden: true,
+            menuDisabled: true,
+            editor: null,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                    Rally.nav.Manager.getDetailUrl(record.get('Task')),
+                    record.get('Task').FormattedID
+                );;
+            }
+        });  
+        
+        columns.push({
+            dataIndex: 'TaskName',
+            text: 'Task Name',
+            sortable: true,
+            flex: 1,
+            hidden: true,
+            menuDisabled: true,
+            editor: null
+        }); 
         
         var state_config = {
             dataIndex: 'State',
@@ -297,6 +362,7 @@ Ext.define('CA.techservices.TimeTable', {
             align: 'center',
             field: 'test',
             sortable: true,
+            menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -332,6 +398,7 @@ Ext.define('CA.techservices.TimeTable', {
             align: 'center',
             field: 'test',
             sortable: true,
+            menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -362,6 +429,43 @@ Ext.define('CA.techservices.TimeTable', {
         };
         
         columns.push(todo_config);
+        
+        return columns;
+    },
+    
+    _getBaseLeftColumns: function() {
+        var me = this;
+        
+        var columns = [
+            {
+                xtype:'rallyrowactioncolumn',
+                sortable: false,
+                scope: me,
+                rowActionsFn: function (record) {
+                    return me._getRowActions(record);
+                }
+            },
+            { 
+                text: ' ',
+                width: 25,
+                dataIndex: '__SecretKey',
+                renderer: function(value,meta,record) {
+                    var icons = "";
+                    
+                    if ( record.hasOpenDetails() ) {
+                        icons = icons + "<span class='icon-calendar'></span>";
+                    }
+                    return icons;
+                }
+            }
+        ];
+        
+        return columns; 
+    },
+    
+    _getBaseRightColumns: function() {
+        var me = this;
+        var columns = [];
         
         Ext.Array.each( CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(this.weekStart), function(day,idx) {
             columns.push(this._getColumnForDay(day,idx));
