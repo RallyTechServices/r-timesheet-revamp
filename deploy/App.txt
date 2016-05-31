@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 31 2016 16:11:10 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 31 2016 16:30:27 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 31 2016 16:11:10 GMT-0700 (PDT)";
-        var CHECKSUM = 337708170200;
+        var APP_BUILD_DATE = "Tue May 31 2016 16:30:27 GMT-0700 (PDT)";
+        var CHECKSUM = 337883390486;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -3673,6 +3673,7 @@ Ext.define("TSTimesheet", {
     
     _addConfigButtons: function(container) {
         this.pickableColumns = this.time_table.getPickableColumns();
+        container.removeAll();
         
         container.add({
             xtype:'tscolumnpickerbutton',

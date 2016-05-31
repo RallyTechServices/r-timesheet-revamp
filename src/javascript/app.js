@@ -131,6 +131,7 @@ Ext.define("TSTimesheet", {
     
     _addConfigButtons: function(container) {
         this.pickableColumns = this.time_table.getPickableColumns();
+        container.removeAll();
         
         container.add({
             xtype:'tscolumnpickerbutton',
