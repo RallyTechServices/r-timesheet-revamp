@@ -23,12 +23,12 @@ Ext.define('CA.technicalservices.ColumnPickerButton',{
         this.callParent(arguments);
         this.addEvents(
             /**
-             * @event columnsChosen
+             * @event columnschosen
              * Fires when user clicks done after choosing columns
              * @param {CA.technicalservices.ColumnPickerButton} this button
              * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
              */
-            'columnsChosen'
+            'columnschosen'
         );
     },
     
@@ -45,8 +45,8 @@ Ext.define('CA.technicalservices.ColumnPickerButton',{
             pickableColumns: this.pickableColumns,
             listeners: {
                 scope: this,
-                columnsChosen: function(dialog, columns) {
-                    this.fireEvent('columnsChosen', me, columns);
+                columnschosen: function(dialog, columns) {
+                    this.fireEvent('columnschosen', me, columns);
                 }
             }
         });

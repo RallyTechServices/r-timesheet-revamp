@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 31 2016 15:36:27 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue May 31 2016 15:56:07 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 31 2016 15:36:27 GMT-0700 (PDT)";
-        var CHECKSUM = 331087806994;
+        var APP_BUILD_DATE = "Tue May 31 2016 15:56:07 GMT-0700 (PDT)";
+        var CHECKSUM = 337626063210;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1122,12 +1122,12 @@ Ext.define('CA.technicalservices.ColumnPickerDialog',{
         this.callParent(arguments);
         this.addEvents(
             /**
-             * @event columnsChosen
+             * @event columnschosen
              * Fires when user clicks done after choosing columns
              * @param {CA.technicalservices.ColumnPickerDialog} this dialog
              * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
              */
-            'columnsChosen'
+            'columnschosen'
         );
         
         this._buildButtons();
@@ -1154,7 +1154,7 @@ Ext.define('CA.technicalservices.ColumnPickerDialog',{
                     userAction: 'clicked done in dialog',
                     handler: function() {
                         var selectedRecords = this.getRecordsWithSelection();
-                        this.fireEvent('columnsChosen', this, selectedRecords);
+                        this.fireEvent('columnschosen', this, selectedRecords);
                         this.close();
                     }
                 },
@@ -1254,12 +1254,12 @@ Ext.define('CA.technicalservices.ColumnPickerButton',{
         this.callParent(arguments);
         this.addEvents(
             /**
-             * @event columnsChosen
+             * @event columnschosen
              * Fires when user clicks done after choosing columns
              * @param {CA.technicalservices.ColumnPickerButton} this button
              * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
              */
-            'columnsChosen'
+            'columnschosen'
         );
     },
     
@@ -1276,8 +1276,8 @@ Ext.define('CA.technicalservices.ColumnPickerButton',{
             pickableColumns: this.pickableColumns,
             listeners: {
                 scope: this,
-                columnsChosen: function(dialog, columns) {
-                    this.fireEvent('columnsChosen', me, columns);
+                columnschosen: function(dialog, columns) {
+                    this.fireEvent('columnschosen', me, columns);
                 }
             }
         });
@@ -2700,7 +2700,8 @@ Ext.define('CA.techservices.TimeTable', {
         editable: true,
         timesheetUser: null,
         pinKey: 'CA.techservices.timesheet.pin',
-        showEditTimeDetailsMenuItem: false
+        showEditTimeDetailsMenuItem: false,
+        pickableColumns: null
     },
     
     constructor: function (config) {
@@ -2883,10 +2884,10 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     setPickableColumns: function(pickable_columns) {
+        this.logger.log('setPickableColumns', pickable_columns);
+        
         var columns = Ext.Array.merge([], this._getBaseLeftColumns());
-        
         columns = Ext.Array.merge(columns, pickable_columns);
-        
         columns = Ext.Array.merge(columns, this._getBaseRightColumns());
         
         var store = this.getGrid().getStore();
@@ -2906,7 +2907,7 @@ Ext.define('CA.techservices.TimeTable', {
     getPickableColumns: function() {
         var columns = [],
             me = this;
-        
+            
         columns.push({
             dataIndex: 'Project',
             text: 'Project',
@@ -3039,7 +3040,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
-            sortable: true,
+            sortable: false,
             menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
@@ -3108,7 +3109,25 @@ Ext.define('CA.techservices.TimeTable', {
         
         columns.push(todo_config);
         
-        return columns;
+        if ( ! this.pickableColumns ) { return columns; }
+        
+        var pickable_by_index = {};
+        Ext.Array.each(this.pickableColumns, function(column){
+            pickable_by_index[column.dataIndex] = column;
+        });
+        
+        return Ext.Array.map(columns, function(column){
+            var pickable = pickable_by_index[column.dataIndex];
+            if ( Ext.isEmpty(pickable) ) { return column; }
+            
+            if ( pickable.hidden ) { 
+                column.hidden = true;
+            } else {
+                column.hidden = false;
+            }
+            return column;
+            
+        });
     },
     
     _getBaseLeftColumns: function() {
@@ -3530,6 +3549,12 @@ Ext.define("TSTimesheet", {
     items: [
         {xtype:'container', itemId:'selector_box', region: 'north',  layout: { type:'hbox' }, minHeight: 25}
     ],
+    
+    pickableColumns: null,
+    
+    stateful: true,
+    stateEvents: ['columnschosen','columnmoved','columnresize'],
+    stateId: 'CA.technicalservices.timesheet.Settings.1',
 
     integrationHeaders : {
         name : "TSTimesheet"
@@ -3542,6 +3567,18 @@ Ext.define("TSTimesheet", {
             showAddMyStoriesButton: false,
             showEditTimeDetailsMenuItem: false
         }
+    },
+    
+    getState: function() {
+        var me = this,
+            state = null;
+
+        state = {
+            pickableColumns: this.pickableColumns
+        };
+
+        this.logger.log('getting state', state);
+        return state;
     },
     
     launch: function() {
@@ -3634,18 +3671,19 @@ Ext.define("TSTimesheet", {
     },
     
     _addConfigButtons: function(container) {
-        console.log(this.time_table.getPickableColumns());
-    
+        this.pickableColumns = this.time_table.getPickableColumns();
+        
         container.add({
             xtype:'tscolumnpickerbutton',
-            pickableColumns: this.time_table.getPickableColumns(),
+            pickableColumns: this.pickableColumns,
             listeners: {
                 scope: this,
-                columnsChosen: function(button,columns) {
+                columnschosen: function(button,columns) {
                     var timetable = this.down('tstimetable');
-                    this.columns = columns;
+                    this.pickableColumns = columns;
                     
                     timetable.setPickableColumns(columns);
+                    this.fireEvent('columnschosen');
                 }
             }
         });
@@ -4010,7 +4048,7 @@ Ext.define("TSTimesheet", {
             region: 'center',
             layout: 'fit',
             margin: 15,
-            
+            pickableColumns: this.pickableColumns,
             startDate: this.startDate,
             editable: editable,
             logger: me.logger,

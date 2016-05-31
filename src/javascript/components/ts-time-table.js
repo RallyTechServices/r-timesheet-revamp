@@ -22,7 +22,8 @@ Ext.define('CA.techservices.TimeTable', {
         editable: true,
         timesheetUser: null,
         pinKey: 'CA.techservices.timesheet.pin',
-        showEditTimeDetailsMenuItem: false
+        showEditTimeDetailsMenuItem: false,
+        pickableColumns: null
     },
     
     constructor: function (config) {
@@ -205,10 +206,10 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     setPickableColumns: function(pickable_columns) {
+        this.logger.log('setPickableColumns', pickable_columns);
+        
         var columns = Ext.Array.merge([], this._getBaseLeftColumns());
-        
         columns = Ext.Array.merge(columns, pickable_columns);
-        
         columns = Ext.Array.merge(columns, this._getBaseRightColumns());
         
         var store = this.getGrid().getStore();
@@ -228,7 +229,7 @@ Ext.define('CA.techservices.TimeTable', {
     getPickableColumns: function() {
         var columns = [],
             me = this;
-        
+            
         columns.push({
             dataIndex: 'Project',
             text: 'Project',
@@ -361,7 +362,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
-            sortable: true,
+            sortable: false,
             menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
@@ -430,7 +431,25 @@ Ext.define('CA.techservices.TimeTable', {
         
         columns.push(todo_config);
         
-        return columns;
+        if ( ! this.pickableColumns ) { return columns; }
+        
+        var pickable_by_index = {};
+        Ext.Array.each(this.pickableColumns, function(column){
+            pickable_by_index[column.dataIndex] = column;
+        });
+        
+        return Ext.Array.map(columns, function(column){
+            var pickable = pickable_by_index[column.dataIndex];
+            if ( Ext.isEmpty(pickable) ) { return column; }
+            
+            if ( pickable.hidden ) { 
+                column.hidden = true;
+            } else {
+                column.hidden = false;
+            }
+            return column;
+            
+        });
     },
     
     _getBaseLeftColumns: function() {

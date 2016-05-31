@@ -8,6 +8,12 @@ Ext.define("TSTimesheet", {
     items: [
         {xtype:'container', itemId:'selector_box', region: 'north',  layout: { type:'hbox' }, minHeight: 25}
     ],
+    
+    pickableColumns: null,
+    
+    stateful: true,
+    stateEvents: ['columnschosen','columnmoved','columnresize'],
+    stateId: 'CA.technicalservices.timesheet.Settings.1',
 
     integrationHeaders : {
         name : "TSTimesheet"
@@ -20,6 +26,18 @@ Ext.define("TSTimesheet", {
             showAddMyStoriesButton: false,
             showEditTimeDetailsMenuItem: false
         }
+    },
+    
+    getState: function() {
+        var me = this,
+            state = null;
+
+        state = {
+            pickableColumns: this.pickableColumns
+        };
+
+        this.logger.log('getting state', state);
+        return state;
     },
     
     launch: function() {
@@ -112,18 +130,19 @@ Ext.define("TSTimesheet", {
     },
     
     _addConfigButtons: function(container) {
-        console.log(this.time_table.getPickableColumns());
-    
+        this.pickableColumns = this.time_table.getPickableColumns();
+        
         container.add({
             xtype:'tscolumnpickerbutton',
-            pickableColumns: this.time_table.getPickableColumns(),
+            pickableColumns: this.pickableColumns,
             listeners: {
                 scope: this,
-                columnsChosen: function(button,columns) {
+                columnschosen: function(button,columns) {
                     var timetable = this.down('tstimetable');
-                    this.columns = columns;
+                    this.pickableColumns = columns;
                     
                     timetable.setPickableColumns(columns);
+                    this.fireEvent('columnschosen');
                 }
             }
         });
@@ -488,7 +507,7 @@ Ext.define("TSTimesheet", {
             region: 'center',
             layout: 'fit',
             margin: 15,
-            
+            pickableColumns: this.pickableColumns,
             startDate: this.startDate,
             editable: editable,
             logger: me.logger,
