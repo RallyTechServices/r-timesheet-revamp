@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 31 2016 16:30:27 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Jun 01 2016 19:43:26 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 31 2016 16:30:27 GMT-0700 (PDT)";
-        var CHECKSUM = 337883390486;
+        var APP_BUILD_DATE = "Wed Jun 01 2016 19:43:26 GMT-0700 (PDT)";
+        var CHECKSUM = 353051260997;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2136,6 +2136,36 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return item.Name || '';
             }
         },
+        { name: 'PortfolioItem', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem')
+                    || "";
+            }
+        },
+        { name: 'PortfolioItemOID', type: 'number', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.ObjectID || -1;
+            }
+        },
+        { name: 'PortfolioItemFID', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem');
+                
+                if ( Ext.isEmpty(item) ) { return '' }
+                return item.FormattedID || '';
+            }
+        },
+        { name: 'PortfolioItemName', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem');
+                
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.Name || '';
+            }
+        },
         
         { name: 'Iteration', type: 'object', defaultValue: null, convert: 
             function(value,record) {
@@ -2692,7 +2722,7 @@ Ext.define('CA.techservices.TimeTable', {
     cls: 'tstimetable',
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
-        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
+        'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
         'Iteration','ToDo','State'],
         
     config: {
@@ -2966,6 +2996,54 @@ Ext.define('CA.techservices.TimeTable', {
         columns.push({
             dataIndex: 'WorkProductName',
             text: 'Work Item Name',
+            hidden: true,
+            flex: 1,
+            editor: null,
+            menuDisabled: true,
+            sortable: true
+        });
+        
+        columns.push({
+            dataIndex: 'PortfolioItemOID',
+            text: 'Portfolio Item',
+            flex: 1,
+            editor: null,
+            sortable: true,
+            menuDisabled: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                    record.get('PortfolioItem').FormattedID,
+                    record.get('PortfolioItem').Name
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'PortfolioItemFID',
+            text: 'Portfolio Item ID',
+            flex: 1,
+            editor: null,
+            hidden: true,
+            menuDisabled: true,
+            sortable: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                    Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                    record.get('PortfolioItem').FormattedID
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'PortfolioItemName',
+            text: 'PortfolioItem Name',
             hidden: true,
             flex: 1,
             editor: null,

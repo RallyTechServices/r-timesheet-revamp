@@ -14,7 +14,7 @@ Ext.define('CA.techservices.TimeTable', {
     cls: 'tstimetable',
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
-        'TaskDisplayString','Feature','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
+        'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
         'Iteration','ToDo','State'],
         
     config: {
@@ -288,6 +288,54 @@ Ext.define('CA.techservices.TimeTable', {
         columns.push({
             dataIndex: 'WorkProductName',
             text: 'Work Item Name',
+            hidden: true,
+            flex: 1,
+            editor: null,
+            menuDisabled: true,
+            sortable: true
+        });
+        
+        columns.push({
+            dataIndex: 'PortfolioItemOID',
+            text: 'Portfolio Item',
+            flex: 1,
+            editor: null,
+            sortable: true,
+            menuDisabled: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                    Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                    record.get('PortfolioItem').FormattedID,
+                    record.get('PortfolioItem').Name
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'PortfolioItemFID',
+            text: 'Portfolio Item ID',
+            flex: 1,
+            editor: null,
+            hidden: true,
+            menuDisabled: true,
+            sortable: true,
+            renderer: function(value, meta, record) {
+                if ( value < 0 ) {
+                    return '--';
+                }
+                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                    Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                    record.get('PortfolioItem').FormattedID
+                );;
+            }
+        });
+        
+        columns.push({
+            dataIndex: 'PortfolioItemName',
+            text: 'PortfolioItem Name',
             hidden: true,
             flex: 1,
             editor: null,

@@ -304,6 +304,36 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return item.Name || '';
             }
         },
+        { name: 'PortfolioItem', type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem')
+                    || "";
+            }
+        },
+        { name: 'PortfolioItemOID', type: 'number', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem');
+                
+                if ( Ext.isEmpty(item) ) { return -1; }
+                return item.ObjectID || -1;
+            }
+        },
+        { name: 'PortfolioItemFID', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem');
+                
+                if ( Ext.isEmpty(item) ) { return '' }
+                return item.FormattedID || '';
+            }
+        },
+        { name: 'PortfolioItemName', type: 'string', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem');
+                
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.Name || '';
+            }
+        },
         
         { name: 'Iteration', type: 'object', defaultValue: null, convert: 
             function(value,record) {
