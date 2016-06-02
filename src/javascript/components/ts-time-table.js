@@ -301,6 +301,7 @@ Ext.define('CA.techservices.TimeTable', {
             flex: 1,
             editor: null,
             sortable: true,
+            hidden: true,
             menuDisabled: true,
             renderer: function(value, meta, record) {
                 if ( value < 0 ) {
