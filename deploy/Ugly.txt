@@ -3,14 +3,14 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Apr 10 2016 21:01:27 GMT-0700 (PDT) -->
+    <!--  Build Date: Sat Jul 16 2016 16:21:36 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Apr 10 2016 21:01:27 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Sat Jul 16 2016 16:21:36 GMT-0700 (PDT)";
         var CHECKSUM = [%= checksum %];
     </script>
     
-    <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
+    <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
 
     <script type="text/javascript">
         Rally.onReady(function() {
@@ -41,6 +41,24 @@
     margin-right: 5px;
     cursor: pointer;
 }
+.x-btn-tsnav-small {
+    background-image: none;
+    background-color: white;
+    border-color: white !important;
+    text-decoration: none;
+}
+.no-border {
+    border-style: none;
+    color: red !important;
+    background-color: white !important ;
+}
+
+.no-border .x-btn-inner {
+    color: red !important;
+    background-color: white !important ;
+}
+
+
 td.ts-total-cell {
     background-color: #eee !important;
 }
@@ -63,6 +81,11 @@ td.ts-weekend-cell {
 
 span.red {
     color: red;
+}
+
+td.ts-right-border {
+    border-style: solid;
+    border-right: thick double #aaa;
 }
     </style>
 

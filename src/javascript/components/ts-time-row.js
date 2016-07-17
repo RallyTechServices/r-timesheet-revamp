@@ -174,17 +174,17 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
                 Rally.data.ModelFactory.getModel({
                     type: 'Preference',
                     success: function(model) {
-                        var record = Ext.create(model, {
+                        var pref = Ext.create(model, {
                             Name: key,
                             Value: "{}",
                             User: Rally.getApp().getContext().getUser()._ref,
                             Project: null
                         });
                         
-                        record.save({
+                        pref.save({
                             callback: function(preference, operation) {
                                 if(operation.wasSuccessful()) {
-                                    record.get('DetailPreference', preference);
+                                    record.set('DetailPreference', preference);
                                     deferred.resolve(preference);
                                 }
                             }
@@ -626,7 +626,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 success: function(result) {
                     console.log('Created Time Entry Item');
                     if ( this.createTEVProcess[day_name] && this.createTEVProcess[day_name].getState() === 'pending' ) {
-                        console.log('Save is already in process');
+                        console.log('..Save is already in process');
                         deferred.resolve();
                     } else {
                         this.createTEVProcess[day_name] = this._createTimeEntryValueWithModel(day_name, value, value_date, result);
@@ -642,7 +642,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         }
         
         if ( this.createTEVProcess[day_name] && this.createTEVProcess[day_name].getState() === 'pending' ) {
-            console.log('Save is already in process');
+            console.log('...Save is already in process');
             return;
         } else {
             this.createTEVProcess[day_name] = this._createTimeEntryValueWithModel(day_name, value, value_date, time_entry_item);
@@ -793,6 +793,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
     addTimeBlock: function(day, time_object){
         var block_set = this.get('_DetailBlocks');
         if ( Ext.isEmpty(block_set) && ! Ext.isEmpty(this.get('DetailPreference')) ){
+            console.log('there is a detail pref', this.get('DetailPreference'));
             block_set = Ext.JSON.decode(this.get('DetailPreference').get('Value'));
             this.set('_DetailBlocks', block_set);
         }

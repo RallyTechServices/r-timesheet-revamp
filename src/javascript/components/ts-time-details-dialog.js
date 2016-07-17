@@ -175,7 +175,6 @@ Ext.define('CA.technicalservices.TimeDetailsDialog', {
         container.removeAll();
         
         var today_details = this.row.getTimeBlocks(CA.techservices.timesheet.TimeRowUtils.daysInOrder[this.currentDay]);
-        console.log('--details:', today_details, this.row);
 
         container.add({
             xtype:'container',
