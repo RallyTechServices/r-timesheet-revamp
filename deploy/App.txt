@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sat Jul 16 2016 17:13:12 GMT-0700 (PDT) -->
+    <!--  Build Date: Sat Jul 16 2016 17:28:02 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sat Jul 16 2016 17:13:12 GMT-0700 (PDT)";
-        var CHECKSUM = 353257376531;
+        var APP_BUILD_DATE = "Sat Jul 16 2016 17:28:02 GMT-0700 (PDT)";
+        var CHECKSUM = 354322868831;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2184,6 +2184,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'State', type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State') || "";
+            },
+            sortType : function (value) {
+                var allowed_order = ['Defined','In-Progress','Completed'];
+                return Ext.Array.indexOf(allowed_order,value);
             }
         },
         // WeekStart: Day of Week (0=Sunday, 6=Saturday)
@@ -3122,7 +3126,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
-            sortable: false,
+            sortable: true,
             menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
@@ -3505,7 +3509,7 @@ Ext.define('CA.techservices.TimeTable', {
                 tei.save({
                     fetch: me.time_entry_item_fetch,
                     callback: function(result, operation) {
-                        row = Ext.create('CA.techservices.timesheet.TimeRow',{
+                        var row = Ext.create('CA.techservices.timesheet.TimeRow',{
                             WeekStartDate: me.startDate,
                             TimeEntryItemRecords: [result],
                             TimeEntryValueRecords: []

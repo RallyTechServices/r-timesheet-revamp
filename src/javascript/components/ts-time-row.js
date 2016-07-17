@@ -352,6 +352,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'State', type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State') || "";
+            },
+            sortType : function (value) {
+                var allowed_order = ['Defined','In-Progress','Completed'];
+                return Ext.Array.indexOf(allowed_order,value);
             }
         },
         // WeekStart: Day of Week (0=Sunday, 6=Saturday)

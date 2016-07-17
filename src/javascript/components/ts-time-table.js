@@ -412,7 +412,7 @@ Ext.define('CA.techservices.TimeTable', {
             resizable: false,
             align: 'center',
             field: 'test',
-            sortable: false,
+            sortable: true,
             menuDisabled: true,
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
@@ -795,7 +795,7 @@ Ext.define('CA.techservices.TimeTable', {
                 tei.save({
                     fetch: me.time_entry_item_fetch,
                     callback: function(result, operation) {
-                        row = Ext.create('CA.techservices.timesheet.TimeRow',{
+                        var row = Ext.create('CA.techservices.timesheet.TimeRow',{
                             WeekStartDate: me.startDate,
                             TimeEntryItemRecords: [result],
                             TimeEntryValueRecords: []
