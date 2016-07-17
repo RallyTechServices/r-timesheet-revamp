@@ -209,5 +209,16 @@ Ext.define('TSUtilities', {
     
     _currentUserCanUnapprove: function() {
         return this.currentUserIsAdmin();
+    },
+    
+    fetchPortfolioItemTypes: function() {
+        var config = {
+            model: 'TypeDefinition', 
+            fetch: ["TypePath","Ordinal","Name"],
+            filters: [{property:'TypePath', operator:'contains', value:'PortfolioItem/'}],
+            sorters: [{property:'Ordinal',direction:'ASC'}]
+        };
+        
+        return TSUtilities.loadWsapiRecords(config);
     }
 });

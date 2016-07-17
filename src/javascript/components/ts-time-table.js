@@ -23,9 +23,11 @@ Ext.define('CA.techservices.TimeTable', {
         timesheetUser: null,
         pinKey: 'CA.techservices.timesheet.pin',
         showEditTimeDetailsMenuItem: false,
-        pickableColumns: null
+        pickableColumns: null,
+        /* String -- put in the lowest level PI Name (field name on a story) so we can trace up to a PI */
+        lowestLevelPIName: null
     },
-    
+        
     constructor: function (config) {
         this.mergeConfig(config);
         
@@ -60,6 +62,9 @@ Ext.define('CA.techservices.TimeTable', {
         // shift start date
         this.startDate = TSDateUtils.pretendIMeantUTC(this.startDate);
         
+        if ( !Ext.isEmpty(this.lowestLevelPIName) ) {
+            this.time_entry_item_fetch.push(this.lowestLevelPIName);
+        }
         this._updateData();
     },
     
@@ -82,6 +87,7 @@ Ext.define('CA.techservices.TimeTable', {
                 this.time_entry_defaults = results[3];
                 
                 this.rows = this._createRows(time_entry_items, time_entry_values,time_detail_prefs);
+
                 this._makeGrid(this.rows);
                 this.setLoading(false);
             },
@@ -295,54 +301,106 @@ Ext.define('CA.techservices.TimeTable', {
             sortable: true
         });
         
-        columns.push({
-            dataIndex: 'PortfolioItemOID',
-            text: 'Portfolio Item',
-            flex: 1,
-            editor: null,
-            sortable: true,
-            hidden: true,
-            menuDisabled: true,
-            renderer: function(value, meta, record) {
-                if ( value < 0 ) {
-                    return '--';
+        if (Ext.isEmpty(this.lowestLevelPIName)) {
+            columns.push({
+                dataIndex: 'PortfolioItemOID',
+                text: 'Portfolio Item',
+                flex: 1,
+                editor: null,
+                sortable: true,
+                hidden: true,
+                menuDisabled: true,
+                renderer: function(value, meta, record) {
+                    if ( value < 0 ) {
+                        return '--';
+                    }
+                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                        Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                        record.get('PortfolioItem').FormattedID,
+                        record.get('PortfolioItem').Name
+                    );;
                 }
-                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
-                    Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
-                    record.get('PortfolioItem').FormattedID,
-                    record.get('PortfolioItem').Name
-                );;
-            }
-        });
-        
-        columns.push({
-            dataIndex: 'PortfolioItemFID',
-            text: 'Portfolio Item ID',
-            flex: 1,
-            editor: null,
-            hidden: true,
-            menuDisabled: true,
-            sortable: true,
-            renderer: function(value, meta, record) {
-                if ( value < 0 ) {
-                    return '--';
+            });
+            
+            columns.push({
+                dataIndex: 'PortfolioItemFID',
+                text: 'Portfolio Item ID',
+                flex: 1,
+                editor: null,
+                hidden: true,
+                menuDisabled: true,
+                sortable: true,
+                renderer: function(value, meta, record) {
+                    if ( value < 0 ) {
+                        return '--';
+                    }
+                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                        Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                        record.get('PortfolioItem').FormattedID
+                    );;
                 }
-                return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
-                    Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
-                    record.get('PortfolioItem').FormattedID
-                );;
-            }
-        });
+            });
+            
+            columns.push({
+                dataIndex: 'PortfolioItemName',
+                text: 'PortfolioItem Name',
+                hidden: true,
+                flex: 1,
+                editor: null,
+                menuDisabled: true,
+                sortable: true
+            });
         
-        columns.push({
-            dataIndex: 'PortfolioItemName',
-            text: 'PortfolioItem Name',
-            hidden: true,
-            flex: 1,
-            editor: null,
-            menuDisabled: true,
-            sortable: true
-        });
+        } else {
+            columns.push({
+                dataIndex: 'PortfolioItemOID',
+                text: this.lowestLevelPIName,
+                flex: 1,
+                editor: null,
+                sortable: true,
+                hidden: true,
+                menuDisabled: true,
+                renderer: function(value, meta, record) {
+                    if ( value < 0 ) {
+                        return '--';
+                    }
+                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>: {2}",
+                        Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                        record.get('PortfolioItem').FormattedID,
+                        record.get('PortfolioItem').Name
+                    );;
+                }
+            });
+            
+            columns.push({
+                dataIndex: 'PortfolioItemFID',
+                text: this.lowestLevelPIName + ' ID',
+                flex: 1,
+                editor: null,
+                hidden: true,
+                menuDisabled: true,
+                sortable: true,
+                renderer: function(value, meta, record) {
+                    if ( value < 0 ) {
+                        return '--';
+                    }
+                    return Ext.String.format("<a target='_blank' href='{0}'>{1}</a>",
+                        Rally.nav.Manager.getDetailUrl(record.get('PortfolioItem')),
+                        record.get('PortfolioItem').FormattedID
+                    );;
+                }
+            });
+            
+            columns.push({
+                dataIndex: 'PortfolioItemName',
+                text: this.lowestLevelPIName + ' Name',
+                hidden: true,
+                flex: 1,
+                editor: null,
+                menuDisabled: true,
+                sortable: true
+            });
+        }
         
         columns.push({
             dataIndex: 'Iteration',
@@ -732,6 +790,18 @@ Ext.define('CA.techservices.TimeTable', {
                     detail_preference = pref;
                 }
             });
+            
+            // switch to Feature instead of PI (so it's not just direct kids)
+            if ( !Ext.isEmpty(me.lowestLevelPIName) ) {
+                Ext.Object.each(item_set, function(key,item){
+                    console.log(item);
+                    if ( item.get('WorkProduct') && item.get('WorkProduct')[me.lowestLevelPIName] ) {
+                        var workproduct = item.get('WorkProduct');
+                        workproduct.PortfolioItem = item.get('WorkProduct')[me.lowestLevelPIName];
+                        item.set('WorkProduct', workproduct);
+                    }
+                });
+            }
             
             var config = {
                 WeekStartDate: me.startDate,

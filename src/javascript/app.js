@@ -10,6 +10,7 @@ Ext.define("TSTimesheet", {
     ],
     
     pickableColumns: null,
+    portfolioItemTypes: [],
     
     stateful: true,
     stateEvents: ['columnschosen','columnmoved','columnresize'],
@@ -41,8 +42,21 @@ Ext.define("TSTimesheet", {
     },
     
     launch: function() {
-        this.logger.saveForLater = true;
-        this._addSelectors(this.down('#selector_box'));
+        TSUtilities.fetchPortfolioItemTypes().then({
+            success: function(types) {
+                this.logger.saveForLater = true;
+                this.portfolioItemTypes = types;
+                this._addSelectors(this.down('#selector_box'));
+            },
+            failure: function(msg) {
+                Ext.Msg.alert('Problem Initiating TimeSheet App', msg);
+            },
+            scope: this
+        });
+    },
+    
+    _getLowestLevelPIName: function() {
+        return this.portfolioItemTypes[0].get('Name');
     },
     
     _addSelectors: function(container) {
@@ -509,6 +523,7 @@ Ext.define("TSTimesheet", {
             layout: 'fit',
             margin: 15,
             pickableColumns: this.pickableColumns,
+            lowestLevelPIName: this._getLowestLevelPIName(),
             startDate: this.startDate,
             editable: editable,
             logger: me.logger,
@@ -516,7 +531,6 @@ Ext.define("TSTimesheet", {
             listeners: {
                 scope: this,
                 gridReady: function() {
-                    this.logger.log('-- grid ready -- ');
                     this._addAddButtons(this.down('#add_button_box'));
                     this._addConfigButtons(this.down('#other_button_box'));
                 }
