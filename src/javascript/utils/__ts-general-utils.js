@@ -220,5 +220,21 @@ Ext.define('TSUtilities', {
         };
         
         return TSUtilities.loadWsapiRecords(config);
-    }
+    },
+
+    fetchField: function(modelName,fieldName){
+        var deferred = Ext.create('Deft.Deferred');
+        Rally.data.ModelFactory.getModel({
+            type: modelName,
+            success: function(model) {
+                deferred.resolve(model.getField(fieldName));
+            },
+            failure: function() {
+                var error = "Could not load schedule states";
+                deferred.reject(error);
+            }
+        });
+        return deferred.promise;
+    },
+
 });

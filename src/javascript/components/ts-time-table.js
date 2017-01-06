@@ -42,7 +42,6 @@ Ext.define('CA.techservices.TimeTable', {
     
     initComponent: function() {
         var me = this;
-        
         this.callParent(arguments);
         
         this.addEvents(
@@ -65,7 +64,19 @@ Ext.define('CA.techservices.TimeTable', {
         if ( !Ext.isEmpty(this.lowestLevelPIName) ) {
             this.time_entry_item_fetch.push(this.lowestLevelPIName);
         }
-        this._updateData();
+        
+        TSUtilities.fetchField('Task','State').then({
+            success:function(field){
+                this.taskState = field;
+                this._updateData();
+            },
+            failure: function(msg) {
+                Ext.Msg.alert('Problem Initiating TimeSheet App', msg);
+            },
+            scope: this
+        });
+
+
     },
     
     _updateData: function() {
@@ -464,14 +475,18 @@ Ext.define('CA.techservices.TimeTable', {
             editor: null
         }); 
         
+        //var stateTemplate = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{});
+
         var state_config = {
             dataIndex: 'State',
             text: 'State',
             resizable: false,
-            align: 'center',
+            align: 'left',
             field: 'test',
             sortable: true,
             menuDisabled: true,
+            // xtype: 'templatecolumn',
+            // tpl:Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: {name: 'State' }}),
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -482,18 +497,24 @@ Ext.define('CA.techservices.TimeTable', {
                         xtype:'rallyfieldvaluecombobox',
                         model: 'Task',
                         field: 'State',
+                        value: record.get('Task').State,
                         listeners: {
                             change: function(field, new_value, old_value) {
                                 if ( Ext.isEmpty(new_value) ) {
                                    return;
                                 }
-                                
                                 record.set('State', new_value);
                                 record.save();
                             }
                         }
                     })
                 });
+            }
+            ,
+            renderer: function (value, metaData, record) {
+                tpl = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: me.taskState});
+                console.log('Task',record.get('Task'));
+                return tpl.apply(record.get('Task'));
             }
         };
         
@@ -508,6 +529,7 @@ Ext.define('CA.techservices.TimeTable', {
             field: 'test',
             sortable: true,
             menuDisabled: true,
+            summaryType: 'sum',
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
