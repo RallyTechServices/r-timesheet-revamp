@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Jan 05 2017 16:42:01 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Jan 06 2017 16:06:56 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Jan 05 2017 16:42:01 GMT-0800 (PST)";
-        var CHECKSUM = 379858390903;
+        var APP_BUILD_DATE = "Fri Jan 06 2017 16:06:56 GMT-0800 (PST)";
+        var CHECKSUM = 377892458532;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2202,9 +2202,9 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             }
         },
         
-        { name: 'ToDo', type: 'object', defaultValue: null, convert: 
+        { name: 'ToDo', type: 'number', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo') || "";
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo');
             }
         },
         
@@ -3216,8 +3216,6 @@ Ext.define('CA.techservices.TimeTable', {
             editor: null
         }); 
         
-        //var stateTemplate = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{});
-
         var state_config = {
             dataIndex: 'State',
             text: 'State',
@@ -3226,8 +3224,7 @@ Ext.define('CA.techservices.TimeTable', {
             field: 'test',
             sortable: true,
             menuDisabled: true,
-            // xtype: 'templatecolumn',
-            // tpl:Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: {name: 'State' }}),
+
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -3250,11 +3247,9 @@ Ext.define('CA.techservices.TimeTable', {
                         }
                     })
                 });
-            }
-            ,
+            },
             renderer: function (value, metaData, record) {
                 tpl = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: me.taskState});
-                console.log('Task',record.get('Task'));
                 return tpl.apply(record.get('Task'));
             }
         };
@@ -3286,7 +3281,6 @@ Ext.define('CA.techservices.TimeTable', {
                                 if ( Ext.isEmpty(new_value) ) {
                                     field.setValue(0);
                                 }
-                                
                                 record.set('ToDo', new_value);
                                 record.save();
                             }
@@ -3296,8 +3290,8 @@ Ext.define('CA.techservices.TimeTable', {
             },
             renderer: function(value,meta,record){
                 meta.tdCls = "ts-right-border";
-                return value;
-            }
+                return value > 0 ? value : "";
+            }    
         };
         
         columns.push(todo_config);

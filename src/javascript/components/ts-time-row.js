@@ -343,9 +343,9 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             }
         },
         
-        { name: 'ToDo', type: 'object', defaultValue: null, convert: 
+        { name: 'ToDo', type: 'number', defaultValue: null, convert: 
             function(value,record) {
-                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo') || "";
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.ToDo');
             }
         },
         

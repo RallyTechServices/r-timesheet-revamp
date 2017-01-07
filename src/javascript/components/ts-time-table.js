@@ -475,8 +475,6 @@ Ext.define('CA.techservices.TimeTable', {
             editor: null
         }); 
         
-        //var stateTemplate = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{});
-
         var state_config = {
             dataIndex: 'State',
             text: 'State',
@@ -485,8 +483,7 @@ Ext.define('CA.techservices.TimeTable', {
             field: 'test',
             sortable: true,
             menuDisabled: true,
-            // xtype: 'templatecolumn',
-            // tpl:Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: {name: 'State' }}),
+
             getEditor: function(record,df) {
                 if ( Ext.isEmpty(record.get('Task') ) ) {
                     return false;
@@ -509,11 +506,9 @@ Ext.define('CA.techservices.TimeTable', {
                         }
                     })
                 });
-            }
-            ,
+            },
             renderer: function (value, metaData, record) {
                 tpl = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: me.taskState});
-                console.log('Task',record.get('Task'));
                 return tpl.apply(record.get('Task'));
             }
         };
@@ -545,7 +540,6 @@ Ext.define('CA.techservices.TimeTable', {
                                 if ( Ext.isEmpty(new_value) ) {
                                     field.setValue(0);
                                 }
-                                
                                 record.set('ToDo', new_value);
                                 record.save();
                             }
@@ -555,8 +549,8 @@ Ext.define('CA.techservices.TimeTable', {
             },
             renderer: function(value,meta,record){
                 meta.tdCls = "ts-right-border";
-                return value;
-            }
+                return value > 0 ? value : "";
+            }    
         };
         
         columns.push(todo_config);
