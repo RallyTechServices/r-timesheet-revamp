@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Fri Jan 06 2017 16:06:56 GMT-0800 (PST) -->
+    <!--  Build Date: Tue Mar 14 2017 21:49:52 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Jan 06 2017 16:06:56 GMT-0800 (PST)";
-        var CHECKSUM = 377892458532;
+        var APP_BUILD_DATE = "Tue Mar 14 2017 21:49:52 GMT-0700 (PDT)";
+        var CHECKSUM = 379290642747;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2778,6 +2778,8 @@ Ext.define('CA.techservices.TimeTable', {
         
         this.weekStart = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(this.startDate) || 0;
         
+        console.log('start date/day', this.startDate, this.weekStart);
+        
         this.callParent([this.config]);
     },
     
@@ -3439,6 +3441,8 @@ Ext.define('CA.techservices.TimeTable', {
     _getColumnForDay: function(day,idx) {
         var disabled = false;
         
+        console.log('day/idx', day, idx);
+        
         var editor_config = function(record,df) {
             var minValue = 0;
             return Ext.create('Ext.grid.CellEditor', {
@@ -3462,10 +3466,13 @@ Ext.define('CA.techservices.TimeTable', {
                 })
             });
         };
-
+        
+        var moment_utc_start = moment(this.startDate).utc();
+        var moment_utc_days_later = moment_utc_start.add(idx,'day').utc();
+        
         var header_text = Ext.String.format("{0}<br/>{1}",
             CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
-            moment( Rally.util.DateTime.add(this.startDate,'day',idx) ).utc().format('D MMM')
+            moment_utc_days_later.format('D MMM')
         );
         
         var config = {

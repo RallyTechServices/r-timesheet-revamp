@@ -16,6 +16,7 @@ var monday_in_utc = (new Date(Date.UTC(2016, 1, 8, 0, 0, 0)));
 var monday_in_utc_DST = (new Date(Date.UTC(2016, 2, 14, 0, 0, 0)));    
 var monday_local  = new Date(2016,1,8);
 var monday_local_DST = new Date(2016,2,14);
+var monday_2017_local_DST = new Date(2017,2,13);
 
 var friday_in_utc = (new Date(Date.UTC(2016, 1, 12, 0, 0, 0)));    
 var friday_local  = new Date(2016,1,12);

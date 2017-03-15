@@ -37,6 +37,8 @@ Ext.define('CA.techservices.TimeTable', {
         
         this.weekStart = CA.techservices.timesheet.TimeRowUtils.getDayOfWeekFromDate(this.startDate) || 0;
         
+        console.log('start date/day', this.startDate, this.weekStart);
+        
         this.callParent([this.config]);
     },
     
@@ -698,6 +700,8 @@ Ext.define('CA.techservices.TimeTable', {
     _getColumnForDay: function(day,idx) {
         var disabled = false;
         
+        console.log('day/idx', day, idx);
+        
         var editor_config = function(record,df) {
             var minValue = 0;
             return Ext.create('Ext.grid.CellEditor', {
@@ -721,10 +725,13 @@ Ext.define('CA.techservices.TimeTable', {
                 })
             });
         };
-
+        
+        var moment_utc_start = moment(this.startDate).utc();
+        var moment_utc_days_later = moment_utc_start.add(idx,'day').utc();
+        
         var header_text = Ext.String.format("{0}<br/>{1}",
             CA.techservices.timesheet.TimeRowUtils.dayShortNames[day],
-            moment( Rally.util.DateTime.add(this.startDate,'day',idx) ).utc().format('D MMM')
+            moment_utc_days_later.format('D MMM')
         );
         
         var config = {
