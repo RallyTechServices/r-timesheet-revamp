@@ -510,6 +510,9 @@ Ext.define('CA.techservices.TimeTable', {
                 });
             },
             renderer: function (value, metaData, record) {
+                if ( Ext.isEmpty(record.get('Task') ) ) {
+                    return '--';
+                }
                 tpl = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: me.taskState});
                 return tpl.apply(record.get('Task'));
             }

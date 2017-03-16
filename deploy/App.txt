@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Mar 15 2017 20:28:45 GMT-0700 (PDT) -->
+    <!--  Build Date: Wed Mar 15 2017 20:32:45 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Mar 15 2017 20:28:45 GMT-0700 (PDT)";
-        var CHECKSUM = 383079590516;
+        var APP_BUILD_DATE = "Wed Mar 15 2017 20:32:45 GMT-0700 (PDT)";
+        var CHECKSUM = 383463518970;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -3267,6 +3267,9 @@ Ext.define('CA.techservices.TimeTable', {
                 });
             },
             renderer: function (value, metaData, record) {
+                if ( Ext.isEmpty(record.get('Task') ) ) {
+                    return '--';
+                }
                 tpl = Ext.create('Rally.ui.renderer.template.ScheduleStateTemplate',{field: me.taskState});
                 return tpl.apply(record.get('Task'));
             }
