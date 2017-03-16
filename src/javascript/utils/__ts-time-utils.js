@@ -25,7 +25,6 @@ Ext.define('TSDateUtils', {
         
         var local_beginning = TSDateUtils.getBeginningOfWeekForLocalDate(week_date,weekStartDay);
         
-        console.log('week_date', week_date, 'local_beginning', local_beginning, weekStartDay);
         if (showShiftedTimeStamp) {
             return Rally.util.DateTime.toIsoString(local_beginning).replace(/T.*$/,'T00:00:00.0Z');
         }
