@@ -114,9 +114,13 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
     
     getValueFromDayOfWeek: function(week_start_date, week_start_day, day_name) {
         var days_in_order = CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(week_start_day);
-        var index = Ext.Array.indexOf(days_in_order, day_name);
         
-        return Rally.util.DateTime.add(week_start_date,'day',index);
+        var index = Ext.Array.indexOf(days_in_order, day_name);
+        if ( moment(week_start_date).hours() === 0 ) {
+            return moment(week_start_date).add(index,'days').toDate();
+        }
+        
+        return moment(week_start_date).utc().add(index,'days').toDate();
     },
     
     getBlocksFromDetailPreference: function(value,record){
@@ -510,11 +514,13 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             
         var time_entry_value = this.getTimeEntryValue(day);
         
+        console.log('time_entry_value:', time_entry_value);
+        
         if ( Ext.isEmpty(time_entry_value) ) {            
             return this._createTimeEntryValue(day,value);
         }
         
-        time_entry_value.set('Hours',value);
+        time_entry_value.set('Hours',value); 
         // recalculate total
         this.set('Total', 0);
         
@@ -594,14 +600,16 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  this.get('WeekStartDate');
         var time_entry_values = this.get('TimeEntryValueRecords');
+        
+        console.log('getTimeEntryValue', day_name, index, week_start_date, time_entry_values);
                 
         var day_value = null;
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
+        console.log('   ', value_date);
         
         Ext.Array.each(time_entry_values, function(time_entry_value){
-            var delta = Rally.util.DateTime.getDifference(time_entry_value.get('DateVal'), value_date, 'day');
-            
-            if (delta === 0 ) {
+            console.log("comparing", Ext.Date.format(value_date,'y-m-d'), Ext.Date.format(time_entry_value.get('DateVal'),'y-m-d')); 
+            if ( Ext.Date.format(value_date,'y-m-d') == Ext.Date.format(time_entry_value.get('DateVal'),'y-m-d')) {
                 day_value = time_entry_value;
             }
         });
@@ -613,7 +621,12 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         
+        console.log('_createTimeEntryValue', day_name, value);
+
         var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(this.get('WeekStartDate'), this.get('WeekStart'), day_name);
+                
+        console.log('    ', value_date);
+        
         var time_entry_item = null;
         Ext.Array.each(this.get('TimeEntryItemRecords'), function(item){
             var delta = Rally.util.DateTime.getDifference(value_date, item.get('WeekStartDate'), 'day');
@@ -646,9 +659,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         }
         
         if ( this.createTEVProcess[day_name] && this.createTEVProcess[day_name].getState() === 'pending' ) {
-            console.log('...Save is already in process');
+            console.log('...Save is already in process', day_name);
             return;
         } else {
+            console.log('...Create new entry value', day_name);
+            
             this.createTEVProcess[day_name] = this._createTimeEntryValueWithModel(day_name, value, value_date, time_entry_item);
             return this.createTEVProcess[day_name];            
         }
@@ -699,7 +714,9 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this;
         
-        console.log("Creating Time Entry Value", day_name, value, value_date, time_entry_item);
+        var date_val = TSDateUtils.formatShiftedDate(value_date,'Y-m-d') + 'T00:00:00.000Z';
+        
+        console.log("Creating Time Entry Value", day_name, value, value_date, date_val, time_entry_item);
         
         Rally.data.ModelFactory.getModel({
             type: 'TimeEntryValue',
@@ -710,7 +727,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 var tev = Ext.create(model,{
                     Hours: value,
                     TimeEntryItem: { _ref: time_entry_item.get('_ref') },
-                    DateVal: TSDateUtils.formatShiftedDate(value_date,'Y-m-d') + 'T00:00:00.000Z'
+                    DateVal: date_val
                 });
                 
                 tev.save({

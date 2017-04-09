@@ -10,16 +10,19 @@ var previous_monday_local_DST = new Date(2016,2,7);
 
 var sunday_in_utc = (new Date(Date.UTC(2016, 1, 7, 0, 0, 0)));    
 var sunday_local  = new Date(2016,1,7);
-var sunday_local_DST  = new Date(2016,2,13);
+var sunday_local_DST  = new Date(2017,2,12);
+var sunday_local_DST_in_utc  = new Date(Date.UTC(2017,2,12));
+var sunday_local_end_DST_in_utc  = new Date(Date.UTC(2017,10,5));
 
 var monday_in_utc = (new Date(Date.UTC(2016, 1, 8, 0, 0, 0)));    
-var monday_in_utc_DST = (new Date(Date.UTC(2016, 2, 14, 0, 0, 0)));    
+var monday_in_utc_DST = (new Date(Date.UTC(2017, 2, 13, 0, 0, 0)));    
 var monday_local  = new Date(2016,1,8);
-var monday_local_DST = new Date(2016,2,14);
+var monday_local_DST = new Date(2017,2,13);
+var monday_local_DST_in_utc  = new Date(Date.UTC(2017,2,13));
+var monday_local_end_DST_in_utc  = new Date(Date.UTC(2017,10,6));
 
 var friday_in_utc = (new Date(Date.UTC(2016, 1, 12, 0, 0, 0)));    
 var friday_local  = new Date(2016,1,12);
-
 
 var second_sunday_in_utc = (new Date(Date.UTC(2016, 1, 14, 0, 0, 0)));    
 var third_sunday_in_utc = (new Date(Date.UTC(2016, 1, 21, 0, 0, 0)));    
