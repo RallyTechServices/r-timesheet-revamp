@@ -15,7 +15,7 @@ Ext.define('CA.techservices.TimeTable', {
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
         'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
-        'Iteration','ToDo','State'],
+        'Iteration','ToDo','State','DragAndDropRank'],
         
     config: {
         startDate: null,
@@ -24,6 +24,7 @@ Ext.define('CA.techservices.TimeTable', {
         pinKey: 'CA.techservices.timesheet.pin',
         showEditTimeDetailsMenuItem: false,
         pickableColumns: null,
+        maxRows: null,
         /* String -- put in the lowest level PI Name (field name on a story) so we can trace up to a PI */
         lowestLevelPIName: null
     },
@@ -100,7 +101,6 @@ Ext.define('CA.techservices.TimeTable', {
                 this.time_entry_defaults = results[3];
                 
                 this.rows = this._createRows(time_entry_items, time_entry_values,time_detail_prefs);
-
                 this._makeGrid(this.rows);
                 this.setLoading(false);
             },
@@ -134,13 +134,12 @@ Ext.define('CA.techservices.TimeTable', {
     
     _makeGrid: function(rows) {
         this.removeAll();
-
         var me = this,
             table_store = Ext.create('Rally.data.custom.Store',{
                 groupField: '__SecretKey',
                 model: 'CA.techservices.timesheet.TimeRow',
                 data: rows,
-                pageSize: 100
+                pageSize: me.maxRows
             });
             
         
@@ -157,7 +156,6 @@ Ext.define('CA.techservices.TimeTable', {
                 ftype: 'summary',
                 dock: 'top'
             }],
-            
             viewConfig: {
                 listeners: {
                     itemupdate: function(row, row_index) {
@@ -203,9 +201,17 @@ Ext.define('CA.techservices.TimeTable', {
                 record: record,
                 handler: function(menu,evt) {
                     var row = menu.record;
-                    Ext.Array.remove(me.rows, row);
-                    row.clearAndRemove();
-                    
+                    if(0 < row.get('Total')){
+                        Ext.MessageBox.confirm('Clear Row', 'You have hours entered for this row. Are you sure?',function(res){
+                            if('yes'===res){
+                                Ext.Array.remove(me.rows, row);
+                                row.clearAndRemove();
+                            }
+                        });                        
+                    }else{
+                            Ext.Array.remove(me.rows, row);
+                            row.clearAndRemove();
+                    }
                 }
             }
         ];
@@ -249,7 +255,20 @@ Ext.define('CA.techservices.TimeTable', {
     getPickableColumns: function() {
         var columns = [],
             me = this;
-            
+        
+        // columns.push({
+        //     dataIndex: 'DragAndDropRank',
+        //     text: 'Rank',
+        //     flex: 1,
+        //     editor: null,
+        //     //sortable: false,
+        //     hidden: false,
+        //     menuDisabled: true,
+        //     renderer: function(value, meta, record, rowIndex, colIndex, gridStore, view) {
+        //         return Rally.ui.grid.DragAndDropRankColumnRenderer.renderer(value, meta, record, rowIndex, colIndex, gridStore, view);
+        //     }
+        // });
+
         columns.push({
             dataIndex: 'Project',
             text: 'Project',
@@ -705,6 +724,12 @@ Ext.define('CA.techservices.TimeTable', {
         
         console.log('day/idx', day, idx);
         
+        var indexToday = (new Date()).getDay();
+
+        var weekdays = CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(0);
+
+        //console.log('indexToday, weekdays',indexToday, weekdays, weekdays[indexToday], day);
+
         var editor_config = function(record,df) {
             var minValue = 0;
             return Ext.create('Ext.grid.CellEditor', {
@@ -714,6 +739,10 @@ Ext.define('CA.techservices.TimeTable', {
                     maxValue: 24,
                     disabled: disabled,
                     selectOnFocus: true,
+                    keyNavEnabled: false,
+                    mouseWheelEnabled: false,
+                    spinDownEnabled: false,
+                    spinUpEnabled: false,
                     listeners: {
                         change: function(field, new_value, old_value) {
                             if ( Ext.isEmpty(new_value) ) {
@@ -754,7 +783,18 @@ Ext.define('CA.techservices.TimeTable', {
                 return value;
             }
         };
-        
+
+        //Highlight today
+        if ( day == weekdays[indexToday] ) {
+            config.renderer = function(value, meta, record) {
+                meta.tdCls = "ts-total-cell";
+                if ( value === 0 ) {
+                    return "";
+                }
+                return value;
+            };
+        }
+
         if ( day == "Saturday" || day == "Sunday" ) {
             config.renderer = function(value, meta, record) {
                 meta.tdCls = "ts-weekend-cell";
@@ -791,7 +831,6 @@ Ext.define('CA.techservices.TimeTable', {
     _createRows: function(time_entry_items, time_entry_values, time_detail_prefs) {
         var rows = [],
             me = this;
-        
         // in Rally, a time row has to start on Sunday, so we'll have up to two
         // time entry items for every row if the week starts on a different day
         var time_entry_item_sets = this._getTimeEntryItemSets(time_entry_items);
@@ -882,7 +921,6 @@ Ext.define('CA.techservices.TimeTable', {
             config.Task = { _ref: item.get('_ref') };
             config.WorkProduct = { _ref: item.get('WorkProduct')._ref };
         }
-        
         Rally.data.ModelFactory.getModel({
             type: 'TimeEntryItem',
             scope: this,
@@ -943,6 +981,7 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     _loadTimeEntryItems: function() {
+        var me = this;
         this.setLoading('Loading time entry items...');
         
         var filters = [{property:'User.ObjectID',value:this.timesheetUser.ObjectID}];
@@ -953,14 +992,16 @@ Ext.define('CA.techservices.TimeTable', {
             filters.push({property:'WeekStartDate', operator: '>=', value:Rally.util.DateTime.add(this.startDate, 'day', -6)});
             filters.push({property:'WeekStartDate', operator: '<=', value:Rally.util.DateTime.add(this.startDate,'day',6)});
         }
-        
         var config = {
             model: 'TimeEntryItem',
             context: {
                 project: null
             },
             fetch: this.time_entry_item_fetch,
-            filters: filters
+            enableRankFieldParameterAutoMapping:false,
+            filters: filters,
+            limit: me.maxRows * 2,
+            pageSize: me.maxRows * 2
         };
         
         return TSUtilities.loadWsapiRecords(config);
@@ -984,7 +1025,9 @@ Ext.define('CA.techservices.TimeTable', {
                 project: null
             },
             fetch: ['DateVal','Hours','TimeEntryItem','ObjectID'],
-            filters: filters
+            filters: filters,
+            pageSize: 2000,
+            limit: 'Infinity'
         };
         
         return TSUtilities.loadWsapiRecords(config);        

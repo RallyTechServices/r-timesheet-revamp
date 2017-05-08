@@ -236,6 +236,14 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: '__SecretKey', type:'string' },
         { name: 'Pinned', type: 'boolean', defaultValue: false },
         
+        { name: 'DragAndDropRank',type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.DragAndDropRank || '';
+            }
+        },        
+
         { name: 'Project',type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Project');
