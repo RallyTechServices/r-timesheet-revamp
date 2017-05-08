@@ -3,11 +3,11 @@
 <head>
     <title>TS Timesheet</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Mar 15 2017 20:32:45 GMT-0700 (PDT) -->
+    <!--  Build Date: Sun May 07 2017 20:35:28 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Mar 15 2017 20:32:45 GMT-0700 (PDT)";
-        var CHECKSUM = 383463518970;
+        var APP_BUILD_DATE = "Sun May 07 2017 20:35:28 GMT-0700 (PDT)";
+        var CHECKSUM = 402980863072;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2094,6 +2094,14 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: '__SecretKey', type:'string' },
         { name: 'Pinned', type: 'boolean', defaultValue: false },
         
+        { name: 'DragAndDropRank',type: 'object', defaultValue: null, convert: 
+            function(value,record) {
+                var item = CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct');
+                if ( Ext.isEmpty(item) ) { return ''; }
+                return item.DragAndDropRank || '';
+            }
+        },        
+
         { name: 'Project',type: 'object', defaultValue: null, convert: 
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Project');
@@ -2772,7 +2780,7 @@ Ext.define('CA.techservices.TimeTable', {
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
         'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
-        'Iteration','ToDo','State'],
+        'Iteration','ToDo','State','DragAndDropRank'],
         
     config: {
         startDate: null,
@@ -2781,6 +2789,7 @@ Ext.define('CA.techservices.TimeTable', {
         pinKey: 'CA.techservices.timesheet.pin',
         showEditTimeDetailsMenuItem: false,
         pickableColumns: null,
+        maxRows: null,
         /* String -- put in the lowest level PI Name (field name on a story) so we can trace up to a PI */
         lowestLevelPIName: null
     },
@@ -2857,7 +2866,6 @@ Ext.define('CA.techservices.TimeTable', {
                 this.time_entry_defaults = results[3];
                 
                 this.rows = this._createRows(time_entry_items, time_entry_values,time_detail_prefs);
-
                 this._makeGrid(this.rows);
                 this.setLoading(false);
             },
@@ -2891,13 +2899,12 @@ Ext.define('CA.techservices.TimeTable', {
     
     _makeGrid: function(rows) {
         this.removeAll();
-
         var me = this,
             table_store = Ext.create('Rally.data.custom.Store',{
                 groupField: '__SecretKey',
                 model: 'CA.techservices.timesheet.TimeRow',
                 data: rows,
-                pageSize: 100
+                pageSize: me.maxRows
             });
             
         
@@ -2914,7 +2921,6 @@ Ext.define('CA.techservices.TimeTable', {
                 ftype: 'summary',
                 dock: 'top'
             }],
-            
             viewConfig: {
                 listeners: {
                     itemupdate: function(row, row_index) {
@@ -2960,9 +2966,17 @@ Ext.define('CA.techservices.TimeTable', {
                 record: record,
                 handler: function(menu,evt) {
                     var row = menu.record;
-                    Ext.Array.remove(me.rows, row);
-                    row.clearAndRemove();
-                    
+                    if(0 < row.get('Total')){
+                        Ext.MessageBox.confirm('Clear Row', 'You have hours entered for this row. Are you sure?',function(res){
+                            if('yes'===res){
+                                Ext.Array.remove(me.rows, row);
+                                row.clearAndRemove();
+                            }
+                        });                        
+                    }else{
+                            Ext.Array.remove(me.rows, row);
+                            row.clearAndRemove();
+                    }
                 }
             }
         ];
@@ -3006,7 +3020,20 @@ Ext.define('CA.techservices.TimeTable', {
     getPickableColumns: function() {
         var columns = [],
             me = this;
-            
+        
+        // columns.push({
+        //     dataIndex: 'DragAndDropRank',
+        //     text: 'Rank',
+        //     flex: 1,
+        //     editor: null,
+        //     //sortable: false,
+        //     hidden: false,
+        //     menuDisabled: true,
+        //     renderer: function(value, meta, record, rowIndex, colIndex, gridStore, view) {
+        //         return Rally.ui.grid.DragAndDropRankColumnRenderer.renderer(value, meta, record, rowIndex, colIndex, gridStore, view);
+        //     }
+        // });
+
         columns.push({
             dataIndex: 'Project',
             text: 'Project',
@@ -3462,6 +3489,12 @@ Ext.define('CA.techservices.TimeTable', {
         
         console.log('day/idx', day, idx);
         
+        var indexToday = (new Date()).getDay();
+
+        var weekdays = CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(0);
+
+        //console.log('indexToday, weekdays',indexToday, weekdays, weekdays[indexToday], day);
+
         var editor_config = function(record,df) {
             var minValue = 0;
             return Ext.create('Ext.grid.CellEditor', {
@@ -3471,6 +3504,10 @@ Ext.define('CA.techservices.TimeTable', {
                     maxValue: 24,
                     disabled: disabled,
                     selectOnFocus: true,
+                    keyNavEnabled: false,
+                    mouseWheelEnabled: false,
+                    spinDownEnabled: false,
+                    spinUpEnabled: false,
                     listeners: {
                         change: function(field, new_value, old_value) {
                             if ( Ext.isEmpty(new_value) ) {
@@ -3511,7 +3548,18 @@ Ext.define('CA.techservices.TimeTable', {
                 return value;
             }
         };
-        
+
+        //Highlight today
+        if ( day == weekdays[indexToday] ) {
+            config.renderer = function(value, meta, record) {
+                meta.tdCls = "ts-total-cell";
+                if ( value === 0 ) {
+                    return "";
+                }
+                return value;
+            };
+        }
+
         if ( day == "Saturday" || day == "Sunday" ) {
             config.renderer = function(value, meta, record) {
                 meta.tdCls = "ts-weekend-cell";
@@ -3548,7 +3596,6 @@ Ext.define('CA.techservices.TimeTable', {
     _createRows: function(time_entry_items, time_entry_values, time_detail_prefs) {
         var rows = [],
             me = this;
-        
         // in Rally, a time row has to start on Sunday, so we'll have up to two
         // time entry items for every row if the week starts on a different day
         var time_entry_item_sets = this._getTimeEntryItemSets(time_entry_items);
@@ -3639,7 +3686,6 @@ Ext.define('CA.techservices.TimeTable', {
             config.Task = { _ref: item.get('_ref') };
             config.WorkProduct = { _ref: item.get('WorkProduct')._ref };
         }
-        
         Rally.data.ModelFactory.getModel({
             type: 'TimeEntryItem',
             scope: this,
@@ -3700,6 +3746,7 @@ Ext.define('CA.techservices.TimeTable', {
     },
     
     _loadTimeEntryItems: function() {
+        var me = this;
         this.setLoading('Loading time entry items...');
         
         var filters = [{property:'User.ObjectID',value:this.timesheetUser.ObjectID}];
@@ -3710,14 +3757,16 @@ Ext.define('CA.techservices.TimeTable', {
             filters.push({property:'WeekStartDate', operator: '>=', value:Rally.util.DateTime.add(this.startDate, 'day', -6)});
             filters.push({property:'WeekStartDate', operator: '<=', value:Rally.util.DateTime.add(this.startDate,'day',6)});
         }
-        
         var config = {
             model: 'TimeEntryItem',
             context: {
                 project: null
             },
             fetch: this.time_entry_item_fetch,
-            filters: filters
+            enableRankFieldParameterAutoMapping:false,
+            filters: filters,
+            limit: me.maxRows * 2,
+            pageSize: me.maxRows * 2
         };
         
         return TSUtilities.loadWsapiRecords(config);
@@ -3741,7 +3790,9 @@ Ext.define('CA.techservices.TimeTable', {
                 project: null
             },
             fetch: ['DateVal','Hours','TimeEntryItem','ObjectID'],
-            filters: filters
+            filters: filters,
+            pageSize: 2000,
+            limit: 'Infinity'
         };
         
         return TSUtilities.loadWsapiRecords(config);        
@@ -3777,7 +3828,6 @@ Ext.define("TSTimesheet", {
     
     pickableColumns: null,
     portfolioItemTypes: [],
-    
     stateful: true,
     stateEvents: ['columnschosen','columnmoved','columnresize'],
     stateId: 'CA.technicalservices.timesheet.Settings.1',
@@ -3907,8 +3957,30 @@ Ext.define("TSTimesheet", {
                 click: this._findAndAddStory
             }
         });
+
+        container.add({
+            xtype: 'rallyfieldvaluecombobox',
+            model: 'Task',
+            field: 'State',
+            fieldLabel: 'State:',
+            labelAlign: 'right',
+            allowNoEntry: true,
+            listeners: {
+                scope: this,
+                change: this._filterState
+            }
+        });
     },
     
+    _filterState: function(stateChange){
+        var timetable = this.down('tstimetable');
+        if( !(stateChange.value == '' || stateChange.value == null) ) {
+            timetable.grid.filter({property:'State',value:stateChange.value});
+        }else{
+            timetable.grid.filter(null, true);
+        }
+    },
+
     _addConfigButtons: function(container) {
         this.pickableColumns = this.time_table.getPickableColumns();
         container.removeAll();
@@ -3961,8 +4033,8 @@ Ext.define("TSTimesheet", {
                 var new_item_count = items.length;
                 var current_count  = timetable.getGrid().getStore().getTotalCount();
                 
-                if ( current_count + new_item_count > 100 ) {
-                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is ' + this.getSetting('maxRows') + ' lines in the time sheet.');
                     this.setLoading(false);
                 } else {
                     Ext.Array.each(items, function(item){
@@ -4031,8 +4103,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = items.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > 100 ) {
-                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                             me.setLoading(false);
                         } else {
                             Ext.Array.each(items, function(task){
@@ -4083,8 +4155,8 @@ Ext.define("TSTimesheet", {
                 var new_item_count = tasks.length;
                 var current_count  = timetable.getGrid().getStore().getTotalCount();
                 
-                if ( current_count + new_item_count > 100 ) {
-                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                     this.setLoading(false);
                 } else {
                     Ext.Array.each(tasks, function(task){
@@ -4173,8 +4245,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = selectedRecords.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > 100 ) {
-                            Ext.Msg.alert('Problem Adding Tasks', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Tasks', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                         } else {
                             
                             Ext.Array.each(selectedRecords, function(selectedRecord){
@@ -4258,8 +4330,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = selectedRecords.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > 100 ) {
-                            Ext.Msg.alert('Problem Adding Stories', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Stories', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                         } else {
                             Ext.Array.each(selectedRecords, function(selectedRecord){
                                 timetable.addRowForItem(selectedRecord);
@@ -4293,6 +4365,7 @@ Ext.define("TSTimesheet", {
             startDate: this.startDate,
             editable: editable,
             logger: me.logger,
+            maxRows: me.getSetting('maxRows'),
             showEditTimeDetailsMenuItem: me.getSetting('showEditTimeDetailsMenuItem'),
             listeners: {
                 scope: this,
@@ -4349,6 +4422,17 @@ Ext.define("TSTimesheet", {
             margin: check_box_margins,
             boxLabel: 'Include Time Details Option in Menu (Experimental)<br/><span style="color:#999999;"><i>User can enter time ranges during the day to calculate time entry. </i></span>'
         
+        },
+        {
+            xtype: 'rallynumberfield',
+            name: 'maxRows',
+            labelWidth: 100,
+            labelAlign: 'left',
+            width: 200,
+            maxValue: 1000,
+            minValue:10,            
+            fieldLabel: 'Maximum number of rows',
+            value: this.getSetting('maxRows') || 100,
         }
         ];
     },

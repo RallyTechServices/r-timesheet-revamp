@@ -11,7 +11,6 @@ Ext.define("TSTimesheet", {
     
     pickableColumns: null,
     portfolioItemTypes: [],
-    
     stateful: true,
     stateEvents: ['columnschosen','columnmoved','columnresize'],
     stateId: 'CA.technicalservices.timesheet.Settings.1',
@@ -141,8 +140,30 @@ Ext.define("TSTimesheet", {
                 click: this._findAndAddStory
             }
         });
+
+        container.add({
+            xtype: 'rallyfieldvaluecombobox',
+            model: 'Task',
+            field: 'State',
+            fieldLabel: 'State:',
+            labelAlign: 'right',
+            allowNoEntry: true,
+            listeners: {
+                scope: this,
+                change: this._filterState
+            }
+        });
     },
     
+    _filterState: function(stateChange){
+        var timetable = this.down('tstimetable');
+        if( !(stateChange.value == '' || stateChange.value == null) ) {
+            timetable.grid.filter({property:'State',value:stateChange.value});
+        }else{
+            timetable.grid.filter(null, true);
+        }
+    },
+
     _addConfigButtons: function(container) {
         this.pickableColumns = this.time_table.getPickableColumns();
         container.removeAll();
@@ -195,8 +216,8 @@ Ext.define("TSTimesheet", {
                 var new_item_count = items.length;
                 var current_count  = timetable.getGrid().getStore().getTotalCount();
                 
-                if ( current_count + new_item_count > 100 ) {
-                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is ' + this.getSetting('maxRows') + ' lines in the time sheet.');
                     this.setLoading(false);
                 } else {
                     Ext.Array.each(items, function(item){
@@ -265,8 +286,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = items.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > 100 ) {
-                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                             me.setLoading(false);
                         } else {
                             Ext.Array.each(items, function(task){
@@ -317,8 +338,8 @@ Ext.define("TSTimesheet", {
                 var new_item_count = tasks.length;
                 var current_count  = timetable.getGrid().getStore().getTotalCount();
                 
-                if ( current_count + new_item_count > 100 ) {
-                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                     this.setLoading(false);
                 } else {
                     Ext.Array.each(tasks, function(task){
@@ -407,8 +428,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = selectedRecords.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > 100 ) {
-                            Ext.Msg.alert('Problem Adding Tasks', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Tasks', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                         } else {
                             
                             Ext.Array.each(selectedRecords, function(selectedRecord){
@@ -492,8 +513,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = selectedRecords.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > 100 ) {
-                            Ext.Msg.alert('Problem Adding Stories', 'Cannot add items to grid. Limit is 100 lines in the time sheet.');
+                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Stories', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
                         } else {
                             Ext.Array.each(selectedRecords, function(selectedRecord){
                                 timetable.addRowForItem(selectedRecord);
@@ -527,6 +548,7 @@ Ext.define("TSTimesheet", {
             startDate: this.startDate,
             editable: editable,
             logger: me.logger,
+            maxRows: me.getSetting('maxRows'),
             showEditTimeDetailsMenuItem: me.getSetting('showEditTimeDetailsMenuItem'),
             listeners: {
                 scope: this,
@@ -583,6 +605,17 @@ Ext.define("TSTimesheet", {
             margin: check_box_margins,
             boxLabel: 'Include Time Details Option in Menu (Experimental)<br/><span style="color:#999999;"><i>User can enter time ranges during the day to calculate time entry. </i></span>'
         
+        },
+        {
+            xtype: 'rallynumberfield',
+            name: 'maxRows',
+            labelWidth: 100,
+            labelAlign: 'left',
+            width: 200,
+            maxValue: 1000,
+            minValue:10,            
+            fieldLabel: 'Maximum number of rows',
+            value: this.getSetting('maxRows') || 100,
         }
         ];
     },
