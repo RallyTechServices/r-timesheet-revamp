@@ -15,7 +15,7 @@ Ext.define('CA.techservices.TimeTable', {
     
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
         'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
-        'Iteration','ToDo','State','DragAndDropRank'],
+        'Iteration','ToDo','State','Rank'],
         
     config: {
         startDate: null,
@@ -152,6 +152,7 @@ Ext.define('CA.techservices.TimeTable', {
             disableSelection: true,
             enableColumnMove: false,
             enableColumnResize : false,
+            defaultSortToRank:true,
             features: [{
                 ftype: 'summary',
                 dock: 'top'
@@ -251,23 +252,39 @@ Ext.define('CA.techservices.TimeTable', {
 
         return columns;
     },
+
+    getRankValue: function(record, gridStore) {
+        var store = (gridStore && gridStore.treeStore) || gridStore,
+            sorters = store && store.getSorters(),
+            sorter = sorters && sorters[1];
+
+        if (sorter && Rally.data.Ranker.isRankField(sorter.property)) {
+            var index = store.indexOf(record);
+            if (index !== -1) {
+                var currentPage = store.currentPage ? store.currentPage : 1;
+                var offset = store.pageSize * (currentPage-1);
+
+                return sorter.direction === 'ASC' ? index + offset + 1 : store.getTotalCount() - offset - index;
+            }
+        }
+        return '';
+    },
     
     getPickableColumns: function() {
         var columns = [],
             me = this;
         
-        // columns.push({
-        //     dataIndex: 'DragAndDropRank',
-        //     text: 'Rank',
-        //     flex: 1,
-        //     editor: null,
-        //     //sortable: false,
-        //     hidden: false,
-        //     menuDisabled: true,
-        //     renderer: function(value, meta, record, rowIndex, colIndex, gridStore, view) {
-        //         return Rally.ui.grid.DragAndDropRankColumnRenderer.renderer(value, meta, record, rowIndex, colIndex, gridStore, view);
-        //     }
-        // });
+        columns.push({
+            dataIndex: 'DragAndDropRank',
+            text: 'Rank',
+            flex: 1,
+            editor: null,
+            hidden: false,
+            menuDisabled: true,
+            renderer: function(value, meta, record, rowIndex, colIndex, gridStore, view) {
+                return me.getRankValue(record,gridStore);
+            }
+        });
 
         columns.push({
             dataIndex: 'Project',
@@ -651,12 +668,6 @@ Ext.define('CA.techservices.TimeTable', {
             align: 'center',
             editor: null,
             summaryType: 'sum',
-//            summaryRenderer: function(value,meta,record) {
-//                if ( value < 40 ) {
-//                    meta.style = 'background: #fec6cd;';
-//                }
-//                return value;
-//            },
             renderer: total_renderer
         });
             
@@ -723,9 +734,11 @@ Ext.define('CA.techservices.TimeTable', {
         var disabled = false;
         
         console.log('day/idx', day, idx);
-        
-        var indexToday = (new Date()).getDay();
+        var today = new Date();
+        var end_date = Ext.Date.add(this.startDate, Ext.Date.DAY, 7);
+        var indexToday = today.getDay();
 
+        console.log(this.startDate,today,end_date);
         var weekdays = CA.techservices.timesheet.TimeRowUtils.getOrderedDaysBasedOnWeekStart(0);
 
         //console.log('indexToday, weekdays',indexToday, weekdays, weekdays[indexToday], day);
@@ -785,7 +798,7 @@ Ext.define('CA.techservices.TimeTable', {
         };
 
         //Highlight today
-        if ( day == weekdays[indexToday] ) {
+        if ( (day == weekdays[indexToday]) && (this.startDate < today) && (today < end_date)) {
             config.renderer = function(value, meta, record) {
                 meta.tdCls = "ts-total-cell";
                 if ( value === 0 ) {
@@ -941,6 +954,7 @@ Ext.define('CA.techservices.TimeTable', {
                         }
                         me.grid.getStore().loadRecords([row], { addRecords: true });
                         me.rows.push(row);
+                        me.grid.refresh();
                     }
                 });
             }
