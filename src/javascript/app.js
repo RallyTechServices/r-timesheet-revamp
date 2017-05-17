@@ -147,7 +147,10 @@ Ext.define("TSTimesheet", {
             field: 'State',
             fieldLabel: 'State:',
             labelAlign: 'right',
-            allowNoEntry: true,
+            stateful: true,
+            stateId:'task-state-filter-combo',
+            multiSelect:true,
+            value: ["Defined", "In-Progress", "Completed"],
             listeners: {
                 scope: this,
                 change: this._filterState
@@ -157,8 +160,15 @@ Ext.define("TSTimesheet", {
     
     _filterState: function(stateChange){
         var timetable = this.down('tstimetable');
-        if( !(stateChange.value == '' || stateChange.value == null) ) {
-            timetable.grid.filter({property:'State',value:stateChange.value});
+
+        var stateFilter = new Ext.util.Filter({
+            filterFn: function(item) {
+                return  Ext.Array.contains(stateChange.value,item.get('State')) ||  !item.get('State');
+            }
+        });
+
+        if(stateChange.value.length > 0){
+            timetable.grid.filter(stateFilter);
         }else{
             timetable.grid.filter(null, true);
         }
@@ -186,6 +196,7 @@ Ext.define("TSTimesheet", {
     
     // my workproducts are stories I own and stories that have tasks I own
     _addCurrentStories: function() {
+        var me = this;
         var timetable = this.down('tstimetable');
         if ( !timetable ) { return; }
     
@@ -216,8 +227,8 @@ Ext.define("TSTimesheet", {
                 var new_item_count = items.length;
                 var current_count  = timetable.getGrid().getStore().getTotalCount();
                 
-                if ( current_count + new_item_count > this.getSetting('maxRows') ) {
-                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is ' + this.getSetting('maxRows') + ' lines in the time sheet.');
+                if ( current_count + new_item_count > me.getSetting('maxRows') ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is ' + me.getSetting('maxRows') + ' lines in the time sheet.');
                     this.setLoading(false);
                 } else {
                     Ext.Array.each(items, function(item){
@@ -286,8 +297,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = items.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
-                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
+                        if ( current_count + new_item_count > me.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+me.getSetting('maxRows')+' lines in the time sheet.');
                             me.setLoading(false);
                         } else {
                             Ext.Array.each(items, function(task){
@@ -312,6 +323,7 @@ Ext.define("TSTimesheet", {
     },
     
     _addCurrentTasks: function() {
+        var me = this;
         var deferred = Ext.create('Deft.Deferred');
         
         var timetable = this.down('tstimetable');
@@ -338,8 +350,8 @@ Ext.define("TSTimesheet", {
                 var new_item_count = tasks.length;
                 var current_count  = timetable.getGrid().getStore().getTotalCount();
                 
-                if ( current_count + new_item_count > this.getSetting('maxRows') ) {
-                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
+                if ( current_count + new_item_count > me.getSetting('maxRows') ) {
+                    Ext.Msg.alert('Problem Adding Items', 'Cannot add items to grid. Limit is '+me.getSetting('maxRows')+' lines in the time sheet.');
                     this.setLoading(false);
                 } else {
                     Ext.Array.each(tasks, function(task){
@@ -361,6 +373,7 @@ Ext.define("TSTimesheet", {
     },
     
     _findAndAddTask: function() {
+        var me = this;
         var timetable = this.down('tstimetable');
         
         var fetch_fields = ['WorkProduct','Feature','Project','Name','FormattedID','ObjectID'];
@@ -428,8 +441,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = selectedRecords.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
-                            Ext.Msg.alert('Problem Adding Tasks', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
+                        if ( current_count + new_item_count > me.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Tasks', 'Cannot add items to grid. Limit is '+me.getSetting('maxRows')+' lines in the time sheet.');
                         } else {
                             
                             Ext.Array.each(selectedRecords, function(selectedRecord){
@@ -444,6 +457,7 @@ Ext.define("TSTimesheet", {
     },
     
     _findAndAddStory: function() {
+        var me = this;
         var timetable = this.down('tstimetable');
         if (timetable) {
             Ext.create('Rally.technicalservices.ChooserDialog', {
@@ -513,8 +527,8 @@ Ext.define("TSTimesheet", {
                         var new_item_count = selectedRecords.length;
                         var current_count  = timetable.getGrid().getStore().getTotalCount();
                         
-                        if ( current_count + new_item_count > this.getSetting('maxRows') ) {
-                            Ext.Msg.alert('Problem Adding Stories', 'Cannot add items to grid. Limit is '+this.getSetting('maxRows')+' lines in the time sheet.');
+                        if ( current_count + new_item_count > me.getSetting('maxRows') ) {
+                            Ext.Msg.alert('Problem Adding Stories', 'Cannot add items to grid. Limit is '+me.getSetting('maxRows')+' lines in the time sheet.');
                         } else {
                             Ext.Array.each(selectedRecords, function(selectedRecord){
                                 timetable.addRowForItem(selectedRecord);
