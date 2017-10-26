@@ -15,18 +15,13 @@ Ext.define("TSTimesheet", {
     stateEvents: ['columnschosen','columnmoved','columnresize'],
     stateId: 'CA.technicalservices.timesheet.Settings.1',
 
-    integrationHeaders : {
-        name : "TSTimesheet",
-        version : 1.1,
-        vendor : "CArABU"
-    },
-
     config: {
         defaultSettings: {
             /* 0=sunday, 6=saturday */
             weekStartsOn: 0,
             showAddMyStoriesButton: false,
-            showEditTimeDetailsMenuItem: false
+            showEditTimeDetailsMenuItem: false,
+            showTaskStateFilter: true
         }
     },
 
@@ -143,21 +138,23 @@ Ext.define("TSTimesheet", {
             }
         });
 
-        container.add({
-            xtype: 'rallyfieldvaluecombobox',
-            model: 'Task',
-            field: 'State',
-            fieldLabel: 'State:',
-            labelAlign: 'right',
-            stateful: true,
-            stateId:'task-state-filter-combo',
-            multiSelect:true,
-            value: ["Defined", "In-Progress", "Completed"],
-            listeners: {
-                scope: this,
-                change: this._filterState
-            }
-        });
+        if ( this.getSetting('showTaskStateFilter') ) {
+            container.add({
+                xtype: 'rallyfieldvaluecombobox',
+                model: 'Task',
+                field: 'State',
+                fieldLabel: 'State:',
+                labelAlign: 'right',
+                stateful: true,
+                stateId:'task-state-filter-combo',
+                multiSelect:true,
+                value: ["Defined", "In-Progress", "Completed"],
+                listeners: {
+                    scope: this,
+                    change: this._filterState
+                }
+            });
+        }
     },
 
     _filterState: function(stateChange){
