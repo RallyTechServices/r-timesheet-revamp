@@ -603,6 +603,14 @@ Ext.define("TSTimesheet", {
             readyEvent: 'ready'
         },
         {
+            name: 'showTaskStateFilter',
+            xtype: 'rallycheckboxfield',
+            boxLabelAlign: 'after',
+            fieldLabel: '',
+            margin: check_box_margins,
+            boxLabel: 'Show the Task State Filter<br/><span style="color:#999999;"><i>User can limit display of tasks to ones in particular states (does not affect other object types).</i></span>'
+        },
+        {
             name: 'showAddMyStoriesButton',
             xtype: 'rallycheckboxfield',
             boxLabelAlign: 'after',

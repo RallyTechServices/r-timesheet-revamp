@@ -86,7 +86,7 @@ to get set up to develop:
     }
 
 ### Usage of the grunt file
-####Tasks
+#### Tasks
 
 ##### grunt debug
 
