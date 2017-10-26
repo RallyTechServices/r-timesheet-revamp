@@ -16,12 +16,12 @@ all of the default items are added to the time table.  (Does not have to be a ta
 
 * Different kinds of searches for things to add to the timesheet:
 
-** Add My Tasks looks for tasks the user owns and are in an iteration that overlaps the chosen week.  (This is slightly different
+    * Add My Tasks looks for tasks the user owns and are in an iteration that overlaps the chosen week.  (This is slightly different
 from the out-of-the-box button.)
-** + My (WorkProducts) looks for work products in a current iteration that the user either owns or owns a task for and just puts
+    * + My (WorkProducts) looks for work products in a current iteration that the user either owns or owns a task for and just puts
 the story on the timesheet.
-** + (Tasks) opens a search dialog to find tasks directly using several search criteria including name and release.
-** + (WorkProducts) opens a search dialog to find workproducts directly using several search criteria.
+    * + (Tasks) opens a search dialog to find tasks directly using several search criteria including name and release.
+    * + (WorkProducts) opens a search dialog to find workproducts directly using several search criteria.
 
 * Filter for state:  The administrator can configure the app to provide a filter that will allow for the restricted display of tasks by state.
 Filter choice does not affect stories/defects.
