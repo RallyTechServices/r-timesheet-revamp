@@ -1,4 +1,4 @@
-#TS Timesheet
+# CATS Timesheet
 
 This is an alternative to time entry in Agile Central that provides several interesting features.  
 
@@ -9,18 +9,22 @@ traditional AC time entry items, so if a week starts on a day other than Sunday,
 item for each possible week that has a time entry value.  This will mean that clearing the week will sometimes not remove
 the time entry item line -- it has to hold a spot for the previous week's data.
 
-* The timesheet allows a user to set one or more time entry items as default.  Then, when the Add My Tasks button is pushed, 
+* The timesheet allows a user to set one or more time entry items as default.  Then, when the Add My Tasks button is pushed,
 all of the default items are added to the time table.  (Does not have to be a task to be pinned.)
 
 ![timesheet](./images/timetable_menu.png)
 
 * Different kinds of searches for things to add to the timesheet:
-** Add My Tasks looks for tasks the user owns and are in an iteration that overlaps the chosen week.  (This is slightly different
+
+    * Add My Tasks looks for tasks the user owns and are in an iteration that overlaps the chosen week.  (This is slightly different
 from the out-of-the-box button.)
-** + My (WorkProducts) looks for work products in a current iteration that the user either owns or owns a task for and just puts 
+    * + My (WorkProducts) looks for work products in a current iteration that the user either owns or owns a task for and just puts
 the story on the timesheet.
-** + (Tasks) opens a search dialog to find tasks directly using several search criteria including name and release.
-** + (WorkProducts) opens a search dialog to find workproducts directly using several search criteria.
+    * + (Tasks) opens a search dialog to find tasks directly using several search criteria including name and release.
+    * + (WorkProducts) opens a search dialog to find workproducts directly using several search criteria.
+
+* Filter for state:  The administrator can configure the app to provide a filter that will allow for the restricted display of tasks by state.
+Filter choice does not affect stories/defects.
 
 * The app can be configured to show different columns for different users.
 
@@ -39,13 +43,13 @@ the story on the timesheet.
 
 ### First Load
 
-If you've just downloaded this from github and you want to do development, 
+If you've just downloaded this from github and you want to do development,
 you're going to need to have these installed:
 
  * node.js
  * grunt-cli
  * grunt-init
- 
+
 Since you're getting this from github, we assume you have the command line
 version of git also installed.  If not, go get git.
 
@@ -56,15 +60,15 @@ to get set up to develop:
 
 ### Structure
 
-  * src/javascript:  All the JS files saved here will be compiled into the 
+  * src/javascript:  All the JS files saved here will be compiled into the
   target html file
-  * src/style: All of the stylesheets saved here will be compiled into the 
+  * src/style: All of the stylesheets saved here will be compiled into the
   target html file
-  * test/fast: Fast jasmine tests go here.  There should also be a helper 
+  * test/fast: Fast jasmine tests go here.  There should also be a helper
   file that is loaded first for creating mocks and doing other shortcuts
   (fastHelper.js) **Tests should be in a file named <something>-spec.js**
   * test/slow: Slow jasmine tests go here.  There should also be a helper
-  file that is loaded first for creating mocks and doing other shortcuts 
+  file that is loaded first for creating mocks and doing other shortcuts
   (slowHelper.js) **Tests should be in a file named <something>-spec.js**
   * templates: This is where templates that are used to create the production
   and debug html files live.  The advantage of using these templates is that
@@ -80,10 +84,10 @@ to get set up to develop:
         "password":"secret",
         "server": "https://rally1.rallydev.com"
     }
-  
+
 ### Usage of the grunt file
-####Tasks
-    
+#### Tasks
+
 ##### grunt debug
 
 Use grunt debug to create the debug html file.  You only need to run this when you have added new files to
@@ -95,7 +99,7 @@ Use grunt build to create the production html file.  We still have to copy the h
 
 ##### grunt test-fast
 
-Use grunt test-fast to run the Jasmine tests in the fast directory.  Typically, the tests in the fast 
+Use grunt test-fast to run the Jasmine tests in the fast directory.  Typically, the tests in the fast
 directory are more pure unit tests and do not need to connect to Rally.
 
 ##### grunt test-slow
@@ -133,4 +137,3 @@ pageOid and panelOid lines to install in a new place.  CAUTION:  Currently, erro
 ##### grunt watch
 
 Run this to watch files (js and css).  When a file is saved, the task will automatically build and deploy as shown in the deploy section above.
-
