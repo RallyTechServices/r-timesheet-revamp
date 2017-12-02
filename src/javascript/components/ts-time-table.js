@@ -755,19 +755,18 @@ Ext.define('CA.techservices.TimeTable', {
                     keyNavEnabled: false,
                     mouseWheelEnabled: false,
                     spinDownEnabled: false,
-                    spinUpEnabled: false,
-                    listeners: {
-                        change: function(field, new_value, old_value) {
-                            if ( Ext.isEmpty(new_value) ) {
-                                field.setValue(0);
-                            }
-                            
-                            //console.log('change', day, new_value);
-                            record.set(day, new_value);
-                            record.save();
+                    spinUpEnabled: false
+                }),
+                listeners: {
+                    complete: function(field, new_value, old_value) {
+                        if ( Ext.isEmpty(new_value) ) {
+                            field.setValue(0);
                         }
+                        //console.log('change', day, new_value);
+                        record.set(day, new_value);
+                        record.save();
                     }
-                })
+                }
             });
         };
         
@@ -794,7 +793,13 @@ Ext.define('CA.techservices.TimeTable', {
                     return "";
                 } 
                 return value;
-            }
+            },
+            summaryRenderer: function(value,meta,record) {
+                if ( value === 0 ) {
+                    return "";
+                } 
+                return Ext.util.Format.number(value,"0.00");
+            }            
         };
 
         //Highlight today

@@ -3,11 +3,11 @@
 <head>
     <title>CATS-Timesheet-1.2</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Oct 25 2017 17:46:29 GMT-0700 (PDT) -->
+    <!--  Build Date: Fri Dec 01 2017 17:10:18 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Oct 25 2017 17:46:29 GMT-0700 (PDT)";
-        var CHECKSUM = 412498937242;
+        var APP_BUILD_DATE = "Fri Dec 01 2017 17:10:18 GMT-0800 (PST)";
+        var CHECKSUM = 413503609906;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -3525,19 +3525,18 @@ Ext.define('CA.techservices.TimeTable', {
                     keyNavEnabled: false,
                     mouseWheelEnabled: false,
                     spinDownEnabled: false,
-                    spinUpEnabled: false,
-                    listeners: {
-                        change: function(field, new_value, old_value) {
-                            if ( Ext.isEmpty(new_value) ) {
-                                field.setValue(0);
-                            }
-                            
-                            //console.log('change', day, new_value);
-                            record.set(day, new_value);
-                            record.save();
+                    spinUpEnabled: false
+                }),
+                listeners: {
+                    complete: function(field, new_value, old_value) {
+                        if ( Ext.isEmpty(new_value) ) {
+                            field.setValue(0);
                         }
+                        //console.log('change', day, new_value);
+                        record.set(day, new_value);
+                        record.save();
                     }
-                })
+                }
             });
         };
         
@@ -3564,7 +3563,13 @@ Ext.define('CA.techservices.TimeTable', {
                     return "";
                 } 
                 return value;
-            }
+            },
+            summaryRenderer: function(value,meta,record) {
+                if ( value === 0 ) {
+                    return "";
+                } 
+                return Ext.util.Format.number(value,"0.00");
+            }            
         };
 
         //Highlight today
