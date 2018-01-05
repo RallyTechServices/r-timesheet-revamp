@@ -760,7 +760,8 @@ Ext.define('CA.techservices.TimeTable', {
                 listeners: {
                     complete: function(field, new_value, old_value) {
                         if ( Ext.isEmpty(new_value) ) {
-                            field.setValue(0);
+                            new_value = 0;
+                            field.setValue(new_value);
                         }
                         //console.log('change', day, new_value);
                         record.set(day, new_value);
