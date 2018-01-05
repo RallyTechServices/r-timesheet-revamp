@@ -3,11 +3,11 @@
 <head>
     <title>CATS-Timesheet-1.2</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Fri Dec 01 2017 17:10:18 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Jan 05 2018 15:30:18 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Dec 01 2017 17:10:18 GMT-0800 (PST)";
-        var CHECKSUM = 413503609906;
+        var APP_BUILD_DATE = "Fri Jan 05 2018 15:30:18 GMT-0800 (PST)";
+        var CHECKSUM = 413691466004;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -3530,7 +3530,8 @@ Ext.define('CA.techservices.TimeTable', {
                 listeners: {
                     complete: function(field, new_value, old_value) {
                         if ( Ext.isEmpty(new_value) ) {
-                            field.setValue(0);
+                            new_value = 0;
+                            field.setValue(new_value);
                         }
                         //console.log('change', day, new_value);
                         record.set(day, new_value);
