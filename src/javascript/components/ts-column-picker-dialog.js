@@ -1,10 +1,10 @@
 Ext.define('CA.technicalservices.ColumnPickerDialog',{
     extend: 'Rally.ui.dialog.Dialog',
     alias: 'widget.tscolumnpickerdialog',
-    
+
     width: 200,
     closable: true,
-    
+
     config: {
         /**
          * @cfg {String}
@@ -17,23 +17,23 @@ Ext.define('CA.technicalservices.ColumnPickerDialog',{
          */
         multiple: true,
         /**
-         * 
+         *
          * @cfg [{Ext.Column.column}]  columns that
-         * can be chosen.  hidden = false means chosen to 
+         * can be chosen.  hidden = false means chosen to
          * show.
-         *  
+         *
          */
         pickableColumns: [],
-        
+
         selectionButtonText: 'Apply'
-        
+
     },
-    
+
     items: [{
         xtype: 'panel',
         border: false,
         items: [{
-            xtype:'container', 
+            xtype:'container',
             itemId:'grid_container',
             layout: 'fit',
             height: 325
@@ -57,12 +57,12 @@ Ext.define('CA.technicalservices.ColumnPickerDialog',{
              */
             'columnschosen'
         );
-        
+
         this._buildButtons();
         //this._buildSearchBar();
         this._buildGrid();
     },
-    
+
     _buildButtons: function() {
         this.down('panel').addDocked({
             xtype: 'toolbar',
@@ -97,34 +97,35 @@ Ext.define('CA.technicalservices.ColumnPickerDialog',{
             ]
         });
     },
-    
+
     _buildGrid: function() {
         var mode = this.multiple ? 'MULTI' : 'SINGLE';
         this.selectionModel = Ext.create('Rally.ui.selection.CheckboxModel', {
             mode: mode,
             allowDeselect: true
         });
-        
+
         var pickableColumns = this.pickableColumns;
-        
+
         console.log('pickable columns', pickableColumns);
-        
+
         var store = Ext.create('Rally.data.custom.Store',{
             data: this.pickableColumns
         });
-        
-        
+
+
         this.grid = Ext.create('Rally.ui.grid.Grid', {
             selModel: this.selectionModel,
             enableColumnHide: false,
             enableColumnMove: false,
             columnCfgs: this._getGridColumns(),
             showPagingToolbar: false,
+            showRowActionsColumn: false,
             store: store,
             listeners: {
                 viewready: function(grid) {
                     var selectionModel = grid.getSelectionModel();
-                    
+
                     Ext.Array.each(pickableColumns, function(col, idx){
                         if ( !col.hidden ) {
                             selectionModel.select(grid.store.data.items[idx],true);
@@ -133,27 +134,27 @@ Ext.define('CA.technicalservices.ColumnPickerDialog',{
                 }
             }
         });
-        
+
         this.down('#grid_container').add(this.grid);
     },
-    
+
     _getGridColumns: function() {
         return [
             { dataIndex: 'text', flex: 1 }
         ];
     },
-    
+
     getRecordsWithSelection: function() {
-        var selected_items = this.grid.getSelectionModel().getSelection(); 
+        var selected_items = this.grid.getSelectionModel().getSelection();
         var selected_items_by_dataindex = {};
         Ext.Array.each(selected_items, function(selected_item){
             selected_items_by_dataindex[selected_item.get('text')] = selected_item.getData();
         });
-        
+
         Ext.Array.each(this.pickableColumns, function(pickableColumn){
             pickableColumn.hidden = Ext.isEmpty(selected_items_by_dataindex[pickableColumn.text]);
         });
-        
+
         return this.pickableColumns;
     }
 });

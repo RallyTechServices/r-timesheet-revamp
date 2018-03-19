@@ -361,6 +361,12 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             }
         },
 
+        { name: 'Est', type: 'number', defaultValue: null, convert:
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.Estimate');
+            }
+        },
+
         { name: 'State', type: 'object', defaultValue: null, convert:
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'Task.State') || "";
