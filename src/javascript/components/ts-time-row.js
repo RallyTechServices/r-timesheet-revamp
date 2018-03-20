@@ -316,6 +316,24 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return item.Name || '';
             }
         },
+        { name: 'WorkProductState', type: 'string', defaultValue: null, convert:
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.State')
+                    || "--";
+
+//                if ( Ext.isEmpty(item) ) { return ''; }
+//                return item.State || '';
+            }
+        },
+        { name: 'WorkProductPriority', type: 'string', defaultValue: null, convert:
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Priority')
+                    || "--";
+
+//                if ( Ext.isEmpty(item) ) { return ''; }
+//                return item.Priority || '';
+            }
+        },
         { name: 'PortfolioItem', type: 'object', defaultValue: null, convert:
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem')

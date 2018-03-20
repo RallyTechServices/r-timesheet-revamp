@@ -3,11 +3,11 @@
 <head>
     <title>CATS-Timesheet-1.2</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon Mar 19 2018 15:01:07 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Mar 20 2018 10:53:01 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Mar 19 2018 15:01:07 GMT-0700 (PDT)";
-        var CHECKSUM = 416826413408;
+        var APP_BUILD_DATE = "Tue Mar 20 2018 10:53:01 GMT-0700 (PDT)";
+        var CHECKSUM = 425395629269;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2175,6 +2175,24 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return item.Name || '';
             }
         },
+        { name: 'WorkProductState', type: 'string', defaultValue: null, convert:
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.State')
+                    || "--";
+
+//                if ( Ext.isEmpty(item) ) { return ''; }
+//                return item.State || '';
+            }
+        },
+        { name: 'WorkProductPriority', type: 'string', defaultValue: null, convert:
+            function(value,record) {
+                return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Priority')
+                    || "--";
+
+//                if ( Ext.isEmpty(item) ) { return ''; }
+//                return item.Priority || '';
+            }
+        },
         { name: 'PortfolioItem', type: 'object', defaultValue: null, convert:
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.PortfolioItem')
@@ -2918,7 +2936,7 @@ Ext.define('CA.techservices.TimeTable', {
                 data: rows,
                 pageSize: me.maxRows
             });
-
+//me.logger.log('WO Types:', rows)
 
         this.grid = this.add({
             xtype:'rallygrid',
@@ -2930,6 +2948,9 @@ Ext.define('CA.techservices.TimeTable', {
             enableColumnMove: false,
             enableColumnResize : false,
             defaultSortToRank:true,
+//            stateful: true,
+//    stateEvents: ['columnschosen','columnmoved','columnresize'],
+//            stateId: 'CA.technicalservices.timesheet.Settings.2',
             features: [{
                 ftype: 'summary',
                 dock: 'top'
@@ -3125,6 +3146,26 @@ Ext.define('CA.techservices.TimeTable', {
             editor: null,
             menuDisabled: true,
             sortable: true
+        });
+
+        columns.push({
+            dataIndex: 'WorkProductState',
+            text: 'Defect State',
+            sortable: true,
+            width: 50,
+            hidden: true,
+            menuDisabled: true,
+            editor: null
+        });
+
+        columns.push({
+            dataIndex: 'WorkProductPriority',
+            text: 'Defect Priority',
+            sortable: true,
+            width: 50,
+            hidden: true,
+            menuDisabled: true,
+            editor: null
         });
 
         if (Ext.isEmpty(this.lowestLevelPIName)) {

@@ -141,7 +141,7 @@ Ext.define('CA.techservices.TimeTable', {
                 data: rows,
                 pageSize: me.maxRows
             });
-
+//me.logger.log('WO Types:', rows)
 
         this.grid = this.add({
             xtype:'rallygrid',
@@ -153,6 +153,9 @@ Ext.define('CA.techservices.TimeTable', {
             enableColumnMove: false,
             enableColumnResize : false,
             defaultSortToRank:true,
+//            stateful: true,
+//    stateEvents: ['columnschosen','columnmoved','columnresize'],
+//            stateId: 'CA.technicalservices.timesheet.Settings.2',
             features: [{
                 ftype: 'summary',
                 dock: 'top'
@@ -348,6 +351,26 @@ Ext.define('CA.techservices.TimeTable', {
             editor: null,
             menuDisabled: true,
             sortable: true
+        });
+
+        columns.push({
+            dataIndex: 'WorkProductState',
+            text: 'Defect State',
+            sortable: true,
+            width: 50,
+            hidden: true,
+            menuDisabled: true,
+            editor: null
+        });
+
+        columns.push({
+            dataIndex: 'WorkProductPriority',
+            text: 'Defect Priority',
+            sortable: true,
+            width: 50,
+            hidden: true,
+            menuDisabled: true,
+            editor: null
         });
 
         if (Ext.isEmpty(this.lowestLevelPIName)) {
