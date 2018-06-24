@@ -14,6 +14,11 @@ all of the default items are added to the time table.  (Does not have to be a ta
 
 ![timesheet](./images/timetable_menu.png)
 
+* The app will provide a warning if:
+    * The time entry is for a day after today
+    * The time entry is for a preceding month, this isn't first day of the week before 12:05pm
+    * The time entry is for a preceding week and this isn't the first day of the month before 12:05pm
+
 * Different kinds of searches for things to add to the timesheet:
 
     * Add My Tasks looks for tasks the user owns and are in an iteration that overlaps the chosen week.  (This is slightly different
