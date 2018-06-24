@@ -72,6 +72,7 @@ Ext.define('CA.techservices.timesheet.TimeRowUtils',{
 
         var index = Ext.Array.indexOf(CA.techservices.timesheet.TimeRowUtils.daysInOrder, day_name);
         var week_start_date =  record.get('WeekStartDate');
+
         if ( Ext.isEmpty(week_start_date) ) { return 0; }
 
         var week_end_date = Rally.util.DateTime.add(week_start_date, 'week', 1);
@@ -472,11 +473,18 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         var deferred = Ext.create('Deft.Deferred'),
             me = this,
             changes = this.getChanges();
-        console.log('--', this.modified);
 
         var promises = [];
+        var week_start_date =  this.get('WeekStartDate');
+
         Ext.Object.each(changes, function(field, value) {
             console.log('Change:',field,value);
+            var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(me.get('WeekStartDate'), me.get('WeekStart'), field);
+
+            if ( value_date > new Date() ) { Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Future', timeout: 1000});  }
+            if ( me._dateIsPrecedingMonth(value_date) ) {  Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Closed Month', timeout: 1000}); }
+            if ( me._dateIsPrecedingWeek(value_date) ) {  Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Closed Week', timeout: 1000}); }
+
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
                 promises.push( function() { return me._changeDayValue(field,value); });
             }
@@ -916,6 +924,57 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
 
     isPinned: function() {
         return this.get('Pinned') || false;
+    },
+
+    _dateIsPrecedingWeek: function(value_date){
+        var today = new Date();
+        var week_start_date =  this.get('WeekStartDate');
+        if ( today < week_start_date ) {
+            return false;
+        }
+
+        if ( today > Rally.util.DateTime.add(week_start_date,"day",8)) {
+            return true;
+        }
+        // if this is the first day of the following week, ok if it's before 12:05
+        if (( today > Rally.util.DateTime.add(week_start_date,"day",7) ) && (today < Rally.util.DateTime.add(week_start_date,"day",8) ) ) {
+            if ( today.getHours() > 12 ) {
+                return true;
+            }
+
+            if ( today.getHours() == 12 && today.getMinutes() > 5 ) {
+                return true;
+            }
+        }
+
+        return false;
+    },
+
+    _dateIsPrecedingMonth: function(value_date) {
+        var today = new Date();
+
+        // if we're the same month, it's not the preceding month
+        if ( value_date.getMonth() == today.getMonth() ) {
+            return false;
+        }
+        // if we're putting in data for the month before last, it's definitely
+        // old
+        if ( value_date.getMonth() < today.getMonth() - 1 ) {
+            return true;
+        }
+        // if we're putting in data and today is the first, it might be ok for last month
+        if ( today.getDate() > 1 ) {
+            return true;
+        }
+        // if it's the first of the month, we have until 12:05pm
+        if ( today.getHours() > 12 ) {
+            return true;
+        }
+
+        if ( today.getHours() == 12 && today.getMinutes() > 5 ) {
+            return true;
+        }
+        return false;
     },
 
     hasOpenDetails: function() {
