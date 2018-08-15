@@ -480,12 +480,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         Ext.Object.each(changes, function(field, value) {
             console.log('Change:',field,value);
             var value_date = CA.techservices.timesheet.TimeRowUtils.getValueFromDayOfWeek(me.get('WeekStartDate'), me.get('WeekStart'), field);
-
-            if ( value_date > new Date() ) { Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Future', timeout: 1000});  }
-            if ( me._dateIsPrecedingMonth(value_date) ) {  Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Closed Month', timeout: 1000}); }
-            if ( me._dateIsPrecedingWeek(value_date) ) {  Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Closed Week', timeout: 1000}); }
+            //if ( value_date > new Date() ) { Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating Time in Future', timeout: 1000});  }
 
             if ( Ext.Array.contains(CA.techservices.timesheet.TimeRowUtils.daysInOrder, field) ) {
+                if ( me._dateIsPrecedingMonth(value_date) || me._dateIsPrecedingWeek(value_date)) { me._showClosedNotification(); }                
                 promises.push( function() { return me._changeDayValue(field,value); });
             }
 
@@ -503,6 +501,13 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         });
 
         return Deft.Chain.sequence(promises,this);
+    },
+
+    _showClosedNotification: function(){
+        Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating time entry in a closed period – registrations will not be transferred to SAP'});
+        setTimeout(function() { 
+            Rally.ui.notify.Notifier.hide();
+        }, 2000);
     },
 
     _changeToDoValue: function(value) {
