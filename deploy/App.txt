@@ -3,11 +3,11 @@
 <head>
     <title>CATS-Timesheet-1.2</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Aug 15 2018 15:37:37 GMT-0700 (PDT) -->
+    <!--  Build Date: Mon Sep 17 2018 16:57:28 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Aug 15 2018 15:37:37 GMT-0700 (PDT)";
-        var CHECKSUM = 440742555865;
+        var APP_BUILD_DATE = "Mon Sep 17 2018 16:57:28 GMT-0700 (PDT)";
+        var CHECKSUM = 442104603075;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2366,7 +2366,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating time entry in a closed period – registrations will not be transferred to SAP'});
         setTimeout(function() { 
             Rally.ui.notify.Notifier.hide();
-        }, 2000);
+        }, 6000);
     },
 
     _changeToDoValue: function(value) {
@@ -2816,7 +2816,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
 
     _dateIsPrecedingMonth: function(value_date) {
         var today = new Date();
-
+        // if we're in next year or next month, it's not preceding month
+        if ( value_date.getYear() > today.getYear() || value_date.getMonth() > today.getMonth() ) {
+            return false;
+        }
+        
         // if we're the same month, it's not the preceding month
         if ( value_date.getMonth() == today.getMonth() ) {
             return false;
