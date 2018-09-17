@@ -507,7 +507,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         Rally.ui.notify.Notifier.showWarning({message: 'Warning: Creating time entry in a closed period – registrations will not be transferred to SAP'});
         setTimeout(function() { 
             Rally.ui.notify.Notifier.hide();
-        }, 2000);
+        }, 6000);
     },
 
     _changeToDoValue: function(value) {
@@ -957,7 +957,11 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
 
     _dateIsPrecedingMonth: function(value_date) {
         var today = new Date();
-
+        // if we're in next year or next month, it's not preceding month
+        if ( value_date.getYear() > today.getYear() || value_date.getMonth() > today.getMonth() ) {
+            return false;
+        }
+        
         // if we're the same month, it's not the preceding month
         if ( value_date.getMonth() == today.getMonth() ) {
             return false;
