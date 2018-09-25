@@ -329,7 +329,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'WorkProductPriority', type: 'string', defaultValue: null, convert:
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Priority')
-                    || "--";
+                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.c_Priority');
 
 //                if ( Ext.isEmpty(item) ) { return ''; }
 //                return item.Priority || '';
@@ -498,6 +498,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             if ( field == "_DetailBlocks" ) {
                 promises.push(function() { return me._changeDetailPreference(value); });
             }
+
+            if ( field == "WorkProductState" ) {
+                promises.push(function() { return me._changeDefectStateValue(value); });
+            }            
         });
 
         return Deft.Chain.sequence(promises,this);
@@ -547,6 +551,45 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
 
                         } else {
                             deferred.reject('Problem saving Task');
+                        }
+                    }
+                });
+            }
+        });
+        return deferred;
+    },
+
+    _changeDefectStateValue: function(value) {
+        return this._changeDefectFieldValue('State',value);
+    },
+ 
+    _changeDefectFieldValue: function(field, value) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        var defect = this.get("WorkProduct");
+ 
+        if ( Ext.isEmpty(defect) ) {
+            return;
+        }
+ 
+        Rally.data.ModelFactory.getModel({
+            type: 'Defect',
+            scope: this,
+            success: function(model) {
+                model.load(defect.ObjectID,{
+                    fetch: ['Name', 'State'],
+                    callback: function(result, operation) {
+                        if(operation.wasSuccessful()) {
+                            result.set(field,value);
+                            result.save({
+                                callback: function(new_defect, operation) {
+                                    me.set('Defect', new_defect.getData());
+                                    deferred.resolve(new_defect);
+                                }
+                            });
+ 
+                        } else {
+                            deferred.reject('Problem saving Defect');
                         }
                     }
                 });

@@ -10,10 +10,12 @@ Ext.define("TSTimesheet", {
     ],
 
     pickableColumns: null,
+    sortedColumn: null,
+    direction: '',    
     portfolioItemTypes: [],
     stateful: true,
-    stateEvents: ['columnschosen','columnmoved','columnresize'],
-    stateId: 'CA.technicalservices.timesheet.Settings.1',
+    stateEvents: ['columnschosen','columnmoved','columnresize','sortchange'],
+    stateId: 'CA.technicalservices.timesheet.Settings.4',
 
     config: {
         defaultSettings: {
@@ -30,9 +32,13 @@ Ext.define("TSTimesheet", {
             state = null;
 
         state = {
-            pickableColumns: this.pickableColumns
+            pickableColumns: this.pickableColumns,
+            sortedColumn: this.sortedColumn,
+            sortDirection: this.sortDirection
         };
-
+        this.sortedColumn = state.sortedColumn;
+        this.sortDirection = state.sortDirection;
+        this.state = state;
         this.logger.log('getting state', state);
         return state;
     },
@@ -557,6 +563,8 @@ Ext.define("TSTimesheet", {
             layout: 'fit',
             margin: 15,
             pickableColumns: this.pickableColumns,
+            sortedColumn: this.sortedColumn,
+            sortDirection: this.sortDirection,            
             lowestLevelPIName: this._getLowestLevelPIName(),
             startDate: this.startDate,
             editable: editable,
@@ -568,6 +576,11 @@ Ext.define("TSTimesheet", {
                 gridReady: function() {
                     this._addAddButtons(this.down('#add_button_box'));
                     this._addConfigButtons(this.down('#other_button_box'));
+                },
+                sortchange: function(grid, dataIndex, direction) {
+                    this.sortedColumn = dataIndex;
+                    this.sortDirection = direction;
+                    me.fireEvent('sortchange', this, dataIndex, direction);
                 }
             }
         });

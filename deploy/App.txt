@@ -3,11 +3,11 @@
 <head>
     <title>CATS-Timesheet-1.2</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Mon Sep 17 2018 16:57:28 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Sep 25 2018 14:19:27 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon Sep 17 2018 16:57:28 GMT-0700 (PDT)";
-        var CHECKSUM = 442104603075;
+        var APP_BUILD_DATE = "Tue Sep 25 2018 14:19:27 GMT-0700 (PDT)";
+        var CHECKSUM = 462961257111;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2188,7 +2188,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
         { name: 'WorkProductPriority', type: 'string', defaultValue: null, convert:
             function(value,record) {
                 return CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.Priority')
-                    || "--";
+                    || CA.techservices.timesheet.TimeRowUtils.getFieldFromTimeEntryItems(value, record, 'WorkProduct.c_Priority');
 
 //                if ( Ext.isEmpty(item) ) { return ''; }
 //                return item.Priority || '';
@@ -2357,6 +2357,10 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
             if ( field == "_DetailBlocks" ) {
                 promises.push(function() { return me._changeDetailPreference(value); });
             }
+
+            if ( field == "WorkProductState" ) {
+                promises.push(function() { return me._changeDefectStateValue(value); });
+            }            
         });
 
         return Deft.Chain.sequence(promises,this);
@@ -2406,6 +2410,45 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
 
                         } else {
                             deferred.reject('Problem saving Task');
+                        }
+                    }
+                });
+            }
+        });
+        return deferred;
+    },
+
+    _changeDefectStateValue: function(value) {
+        return this._changeDefectFieldValue('State',value);
+    },
+ 
+    _changeDefectFieldValue: function(field, value) {
+        var deferred = Ext.create('Deft.Deferred'),
+            me = this;
+        var defect = this.get("WorkProduct");
+ 
+        if ( Ext.isEmpty(defect) ) {
+            return;
+        }
+ 
+        Rally.data.ModelFactory.getModel({
+            type: 'Defect',
+            scope: this,
+            success: function(model) {
+                model.load(defect.ObjectID,{
+                    fetch: ['Name', 'State'],
+                    callback: function(result, operation) {
+                        if(operation.wasSuccessful()) {
+                            result.set(field,value);
+                            result.save({
+                                callback: function(new_defect, operation) {
+                                    me.set('Defect', new_defect.getData());
+                                    deferred.resolve(new_defect);
+                                }
+                            });
+ 
+                        } else {
+                            deferred.reject('Problem saving Defect');
                         }
                     }
                 });
@@ -2878,7 +2921,7 @@ Ext.define('CA.techservices.TimeTable', {
 
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
         'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
-        'Iteration','ToDo','State','Rank','Defect','Estimate','Priority'],
+        'Iteration','ToDo','State','Rank','Defect','Estimate','Priority','c_Priority'],
 
     config: {
         startDate: null,
@@ -3002,7 +3045,11 @@ Ext.define('CA.techservices.TimeTable', {
                 groupField: '__SecretKey',
                 model: 'CA.techservices.timesheet.TimeRow',
                 data: rows,
-                pageSize: me.maxRows
+                pageSize: me.maxRows,
+                remoteSort: false,
+                sortOnFither: true,
+                sortOnLoad: true,
+                sorters: [{property: this.sortedColumn , direction: this.sortDirection}]                
             });
 //me.logger.log('WO Types:', rows)
 
@@ -3023,6 +3070,13 @@ Ext.define('CA.techservices.TimeTable', {
                 ftype: 'summary',
                 dock: 'top'
             }],
+            listeners: {
+                sortchange: function(ct, column, direction, eOpts) {
+                    this.sortedColumn = column.dataIndex;
+                    this.sortDirection = direction;
+                    me.fireEvent('sortchange', this, column.dataIndex, direction);
+                }
+            },            
             viewConfig: {
                 listeners: {
                     itemupdate: function(row, row_index) {
@@ -3216,19 +3270,55 @@ Ext.define('CA.techservices.TimeTable', {
             sortable: true
         });
 
-        columns.push({
+        var d_state_config = {
             dataIndex: 'WorkProductState',
             text: 'Defect State',
             sortable: true,
-            width: 50,
-            hidden: true,
+            field: 'WorkProduct',
             menuDisabled: true,
-            editor: null
-        });
+ 
+            getEditor: function(record,df) {
+                 if (record.get('WorkProduct')._type != 'Defect') {
+                    return false;
+                }
+                var minValue = 0;
+                return Ext.create('Ext.grid.CellEditor', {
+                    field: Ext.create('Rally.ui.combobox.FieldValueComboBox', {
+                        xtype:'rallyfieldvaluecombobox',
+                        model: 'Defect',
+                        field: 'State',
+                        value: record.get('WorkProduct').State,
+                        listeners: {
+                            change: function(field, new_value, old_value) {
+                                if ( Ext.isEmpty(new_value) ) {
+                                   return;
+                                }
+                                record.set(('WorkProduct').State, new_value);
+                                record.save();
+ 
+                            }
+                        }
+                    })
+                });
+            },
+
+        };
+
+        columns.push(d_state_config);
+
+        // columns.push({
+        //     dataIndex: 'WorkProductState',
+        //     text: 'Defect State',
+        //     sortable: true,
+        //     width: 50,
+        //     hidden: true,
+        //     menuDisabled: true,
+        //     editor: null
+        // });
 
         columns.push({
             dataIndex: 'WorkProductPriority',
-            text: 'Defect Priority',
+            text: 'Priority',
             sortable: true,
             width: 50,
             hidden: true,
@@ -3978,10 +4068,12 @@ Ext.define("TSTimesheet", {
     ],
 
     pickableColumns: null,
+    sortedColumn: null,
+    direction: '',    
     portfolioItemTypes: [],
     stateful: true,
-    stateEvents: ['columnschosen','columnmoved','columnresize'],
-    stateId: 'CA.technicalservices.timesheet.Settings.1',
+    stateEvents: ['columnschosen','columnmoved','columnresize','sortchange'],
+    stateId: 'CA.technicalservices.timesheet.Settings.4',
 
     config: {
         defaultSettings: {
@@ -3998,9 +4090,13 @@ Ext.define("TSTimesheet", {
             state = null;
 
         state = {
-            pickableColumns: this.pickableColumns
+            pickableColumns: this.pickableColumns,
+            sortedColumn: this.sortedColumn,
+            sortDirection: this.sortDirection
         };
-
+        this.sortedColumn = state.sortedColumn;
+        this.sortDirection = state.sortDirection;
+        this.state = state;
         this.logger.log('getting state', state);
         return state;
     },
@@ -4525,6 +4621,8 @@ Ext.define("TSTimesheet", {
             layout: 'fit',
             margin: 15,
             pickableColumns: this.pickableColumns,
+            sortedColumn: this.sortedColumn,
+            sortDirection: this.sortDirection,            
             lowestLevelPIName: this._getLowestLevelPIName(),
             startDate: this.startDate,
             editable: editable,
@@ -4536,6 +4634,11 @@ Ext.define("TSTimesheet", {
                 gridReady: function() {
                     this._addAddButtons(this.down('#add_button_box'));
                     this._addConfigButtons(this.down('#other_button_box'));
+                },
+                sortchange: function(grid, dataIndex, direction) {
+                    this.sortedColumn = dataIndex;
+                    this.sortDirection = direction;
+                    me.fireEvent('sortchange', this, dataIndex, direction);
                 }
             }
         });
