@@ -3,11 +3,11 @@
 <head>
     <title>CATS-Timesheet-1.2</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Sep 25 2018 14:19:27 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Sep 25 2018 15:37:29 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Sep 25 2018 14:19:27 GMT-0700 (PDT)";
-        var CHECKSUM = 462961257111;
+        var APP_BUILD_DATE = "Tue Sep 25 2018 15:37:29 GMT-0700 (PDT)";
+        var CHECKSUM = 462961198340;
     </script>
     
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2849,7 +2849,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return true;
             }
 
-            if ( today.getHours() == 12 && today.getMinutes() > 5 ) {
+            if ( today.getHours() == 12 && today.getMinutes() > 4 ) {
                 return true;
             }
         }

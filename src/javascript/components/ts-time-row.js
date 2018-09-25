@@ -990,7 +990,7 @@ Ext.define('CA.techservices.timesheet.TimeRow',{
                 return true;
             }
 
-            if ( today.getHours() == 12 && today.getMinutes() > 5 ) {
+            if ( today.getHours() == 12 && today.getMinutes() > 4 ) {
                 return true;
             }
         }
