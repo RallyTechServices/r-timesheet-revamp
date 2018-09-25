@@ -15,7 +15,7 @@ Ext.define('CA.techservices.TimeTable', {
 
     time_entry_item_fetch: ['WeekStartDate','WorkProductDisplayString','WorkProduct','Task',
         'TaskDisplayString','PortfolioItem','Project', 'ObjectID', 'Name', 'Release', 'FormattedID',
-        'Iteration','ToDo','State','Rank','Defect','Estimate','Priority'],
+        'Iteration','ToDo','State','Rank','Defect','Estimate','Priority','c_Priority'],
 
     config: {
         startDate: null,
@@ -139,7 +139,11 @@ Ext.define('CA.techservices.TimeTable', {
                 groupField: '__SecretKey',
                 model: 'CA.techservices.timesheet.TimeRow',
                 data: rows,
-                pageSize: me.maxRows
+                pageSize: me.maxRows,
+                remoteSort: false,
+                sortOnFither: true,
+                sortOnLoad: true,
+                sorters: [{property: this.sortedColumn , direction: this.sortDirection}]                
             });
 //me.logger.log('WO Types:', rows)
 
@@ -160,6 +164,13 @@ Ext.define('CA.techservices.TimeTable', {
                 ftype: 'summary',
                 dock: 'top'
             }],
+            listeners: {
+                sortchange: function(ct, column, direction, eOpts) {
+                    this.sortedColumn = column.dataIndex;
+                    this.sortDirection = direction;
+                    me.fireEvent('sortchange', this, column.dataIndex, direction);
+                }
+            },            
             viewConfig: {
                 listeners: {
                     itemupdate: function(row, row_index) {
@@ -353,19 +364,55 @@ Ext.define('CA.techservices.TimeTable', {
             sortable: true
         });
 
-        columns.push({
+        var d_state_config = {
             dataIndex: 'WorkProductState',
             text: 'Defect State',
             sortable: true,
-            width: 50,
-            hidden: true,
+            field: 'WorkProduct',
             menuDisabled: true,
-            editor: null
-        });
+ 
+            getEditor: function(record,df) {
+                 if (record.get('WorkProduct')._type != 'Defect') {
+                    return false;
+                }
+                var minValue = 0;
+                return Ext.create('Ext.grid.CellEditor', {
+                    field: Ext.create('Rally.ui.combobox.FieldValueComboBox', {
+                        xtype:'rallyfieldvaluecombobox',
+                        model: 'Defect',
+                        field: 'State',
+                        value: record.get('WorkProduct').State,
+                        listeners: {
+                            change: function(field, new_value, old_value) {
+                                if ( Ext.isEmpty(new_value) ) {
+                                   return;
+                                }
+                                record.set(('WorkProduct').State, new_value);
+                                record.save();
+ 
+                            }
+                        }
+                    })
+                });
+            },
+
+        };
+
+        columns.push(d_state_config);
+
+        // columns.push({
+        //     dataIndex: 'WorkProductState',
+        //     text: 'Defect State',
+        //     sortable: true,
+        //     width: 50,
+        //     hidden: true,
+        //     menuDisabled: true,
+        //     editor: null
+        // });
 
         columns.push({
             dataIndex: 'WorkProductPriority',
-            text: 'Defect Priority',
+            text: 'Priority',
             sortable: true,
             width: 50,
             hidden: true,
